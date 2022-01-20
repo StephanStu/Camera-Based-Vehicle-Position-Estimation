@@ -4,7 +4,7 @@
 int main( int argc, char** argv ) {
   
   cv::Mat image;
-  image = cv::imread("opencv_testimage.png" ,cv::IMREAD_COLOR);
+  image = cv::imread("SimpleRunwayTestImage.png" ,cv::IMREAD_COLOR);
   
   if(! image.data ) {
       std::cout <<  "Image not found or unable to open" << std::endl ;
