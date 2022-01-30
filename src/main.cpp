@@ -4,16 +4,10 @@
 #include <vector>
 #include <iostream>
  
-int main( int argc, char** argv ) {
-  cv::Mat image; // used to hold an RGB-image
+int runHoughTransformationTest(cv::Mat image){
   cv::Mat grayImage; // used for the result of transfroming the RGB-Image to a grayscale-image
   cv::Mat edgesDetected; // used for the result of the Canny-Edge-Detection
   std::vector<cv::Vec4i> lines; // a vector to store lines of the image, using the cv::Vec4i-Datatype
-
-
-  
-  image = cv::imread("SimpleRunwayTestImage.png" ,cv::IMREAD_COLOR);
-  
   if(! image.data ) {
     std::cout <<  "Image not found or unable to open" << std::endl ;
     return -1;
@@ -37,10 +31,50 @@ int main( int argc, char** argv ) {
     }
 
   }
-  
   cv::namedWindow( "OpenCV Test Program", cv::WINDOW_AUTOSIZE );
   cv::imshow( "OpenCV Test Program", image );
-  
-  cv::waitKey(0);
+  return 0;
+}
+
+int runVideoTest(cv::VideoCapture cap){
+  // Create a VideoCapture object and open the input file
+  // If the input is the web camera, pass 0 instead of the video file name
+  cv::Mat frame;
+  // Check if camera opened successfully
+  if(!cap.isOpened()){
+    std::cout << "Error opening video stream or file" << std::endl;
+    return -1;
+  }
+  while(1){
+    // Capture frame-by-frame
+    cap >> frame;
+    // If the frame is empty, break immediately
+    if (frame.empty()){
+      break;
+    }
+    // Display the resulting frame
+    //imshow( "Frame", frame );
+    // Run Hough Transformation and display frame
+    runHoughTransformationTest(frame);
+    // Press  ESC on keyboard to exit
+    char c=(char)cv::waitKey(25);
+    if(c==27){
+      break;
+    }
+  }
+  // When everything done, release the video capture object
+  cap.release();
+  // Closes all the frames
+  cv::destroyAllWindows();
+  return 0;
+}
+
+int main(){
+  int flag;
+  cv::Mat image; // used to hold an RGB-image
+  image = cv::imread("SimpleRunwayTestImage.png" ,cv::IMREAD_COLOR); // sample image to test the transformation.
+  cv::VideoCapture cap("testVideo002.mp4"); // sample video to test the video-processing
+  //flag = runHoughTransformationTest(image);  cv::waitKey(0);
+  flag = runVideoTest(cap);
   return 0;
 }
