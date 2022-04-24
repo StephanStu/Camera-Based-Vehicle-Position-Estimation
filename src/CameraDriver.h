@@ -14,13 +14,13 @@ class CameraDriver{
   cv::Mat getIntrinsicMatrix();
   cv::Mat getDistortionCoefficients();
   // typical behaviour methods
+  void calibrate();
   private:
   // data
   Debuglevel camerDriverDebuglevel;
   cv::Mat intrinsicMatrix;
   cv::Mat distortionCoefficients;
   // typical behaviour methods
-  void calibrate();
 };
 
 #endif

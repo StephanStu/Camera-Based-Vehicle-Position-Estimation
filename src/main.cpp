@@ -191,7 +191,9 @@ int calibrate(){
   cv::imshow("Birds_Eye", image);
   cv::waitKey(0);
   */
-  CameraDriver cameraDriver;
+  Debuglevel debuglevel = Debuglevel::all;
+  CameraDriver cameraDriver(debuglevel);
+  cameraDriver.calibrate();
 
 }
 
