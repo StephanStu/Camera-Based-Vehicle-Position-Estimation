@@ -3,6 +3,17 @@
 #include <opencv2/core/mat.hpp>
 #include <vector>
 #include <iostream>
+#include <opencv2/opencv.hpp>
+#include <string> 
+
+#include "CameraDriver.h"
+#include "Types.h"
+
+using std::vector;
+using std::cout;
+using std::cerr;
+using std::endl;
+using std::string;
  
 int runHoughTransformationTest(cv::Mat image){
   cv::Mat grayImage; // used for the result of transfroming the RGB-Image to a grayscale-image
@@ -69,12 +80,129 @@ int runVideoTest(cv::VideoCapture cap){
   return 0;
 }
 
+int calibrateCamera(cv::Mat image){
+  // Taken from https://github.com/oreillymedia/Learning-OpenCV-3_examples/blob/master/example_19-01.cpp
+  int n_boards = 1;           
+  float image_sf = 0.5f;      // image scaling factor
+  int board_w = 9;
+  int board_h = 6; 
+  int board_n = board_w * board_h;
+  cv::Size board_sz = cv::Size(board_w, board_h);
+  cv::Size image_size = image.size();
+  vector<vector<cv::Point2f>> image_points;
+  vector<vector<cv::Point3f>> object_points;
+  vector<cv::Point2f> corners;
+  bool found = cv::findChessboardCorners(image, board_sz, corners);
+  cout << "Searchign the chessboard corners:" << endl;
+  cout << found << endl;
+  drawChessboardCorners(image, board_sz, corners, found);
+  /*cv::imshow("Calibration", image);
+  cv::waitKey(0);
+  cv::destroyWindow("Calibration");*/
+  image_points.push_back(corners);
+  object_points.push_back(vector<cv::Point3f>());
+  vector<cv::Point3f> &opts = object_points.back();
+  opts.resize(board_n);
+  for (int j = 0; j < board_n; j++) {
+    opts[j] = cv::Point3f(static_cast<float>(j / board_w), static_cast<float>(j % board_w), 0.0f);
+  }
+  cv::Mat intrinsic_matrix, distortion_coeffs;
+  double err = cv::calibrateCamera(object_points, image_points, image_size, intrinsic_matrix, distortion_coeffs, cv::noArray(), cv::noArray(), cv::CALIB_ZERO_TANGENT_DIST | cv::CALIB_FIX_PRINCIPAL_POINT);
+  cout << " *** DONE!\n\nReprojection error is " << err << "\n Saving results in CalibrationData.xml...\n";
+  cv::FileStorage fs("calibrationData.xml", cv::FileStorage::WRITE);
+  fs << "image_width" << image_size.width << "image_height" << image_size.height << "camera_matrix" << intrinsic_matrix << "distortion_coefficients" << distortion_coeffs;
+  fs.release();
+  // EXAMPLE OF LOADING THESE MATRICES BACK IN:
+  fs.open("calibrationData.xml", cv::FileStorage::READ);
+  cout << "\nimage width: " << static_cast<int>(fs["image_width"]);
+  cout << "\nimage height: " << static_cast<int>(fs["image_height"]);
+  cv::Mat intrinsic_matrix_loaded, distortion_coeffs_loaded;
+  fs["camera_matrix"] >> intrinsic_matrix_loaded;
+  fs["distortion_coefficients"] >> distortion_coeffs_loaded;
+  cout << "\nintrinsic matrix:" << intrinsic_matrix_loaded;
+  cout << "\ndistortion coefficients: " << distortion_coeffs_loaded << endl;
+  cv::Mat map1, map2;
+  cv::initUndistortRectifyMap(intrinsic_matrix_loaded, distortion_coeffs_loaded, cv::Mat(), intrinsic_matrix_loaded, image_size, CV_16SC2, map1, map2);
+ // Just run the camera to the screen, now showing the raw and
+ // the undistorted image.
+ //
+ cv::Mat undistortedImage;
+ image = cv::imread("SimpleRunwayTestImage.png" ,cv::IMREAD_COLOR);
+ cv::remap(image, undistortedImage, map1, map2, cv::INTER_LINEAR, cv::BORDER_CONSTANT, cv::Scalar());
+ //cv::imshow("Undistorted", undistortedImage);
+ //cv::waitKey(0);
+  
+  
+  // Bird Eye view starts here:
+  
+ cv::Point2f objPts[4], imgPts[4];
+ objPts[0].x = 0; objPts[0].y = 0;
+ objPts[1].x = board_w-1; objPts[1].y = 0;
+ objPts[2].x = 0; objPts[2].y = board_h-1;
+ objPts[3].x = board_w-1; objPts[3].y = board_h-1;
+ imgPts[0] = corners[0];
+ imgPts[1] = corners[board_w-1];
+ imgPts[2] = corners[(board_h-1)*board_w];
+ imgPts[3] = corners[(board_h-1)*board_w + board_w-1];
+ cv::circle( image, imgPts[0], 9, cv::Scalar( 255, 0, 0), 3);
+ cv::circle( image, imgPts[1], 9, cv::Scalar( 0, 255, 0), 3);
+ cv::circle( image, imgPts[2], 9, cv::Scalar( 0, 0, 255), 3);
+ cv::circle( image, imgPts[3], 9, cv::Scalar( 0, 255, 255), 3);
+ //cv::drawChessboardCorners( image, board_sz, corners, found );
+  cv::Mat H = cv::getPerspectiveTransform( objPts, imgPts );
+ //cv::imshow( "Checkers", image );
+ //  cv::waitKey(0);
+  //cv::destroyWindow("Calibration");
+  
+ double Z = 25;
+ cv::Mat birds_image;
+ for(;;) { // escape key stops
+   H.at<double>(2, 2) = Z;
+   cv::warpPerspective( 
+     image, // Source image
+     birds_image, // Output image
+     H, // Transformation matrix
+     image.size(), // Size for output image
+     cv::WARP_INVERSE_MAP | cv::INTER_LINEAR,
+     cv::BORDER_CONSTANT,
+     cv::Scalar::all(0) // Fill border with black
+   );
+   cv::imshow("Birds_Eye", birds_image);
+   int key = cv::waitKey() & 255;
+   if(key == 'u') Z += 0.5;
+   if(key == 'd') Z -= 0.5;
+   if(key == 27) break;
+ }
+ return 0;
+}
+
+int calibrate(){
+  /*cv::Mat image;
+  string path("calibration/");
+  string file("calibration");
+  string fileType(".jpg");  
+  int number=12;
+  string fileNumber = std::to_string(number);
+  string imageFile = path + file + fileNumber + fileType;
+  cout << imageFile << endl;
+  //image = cv::imread("calibration/calibration01.jpg" ,cv::IMREAD_COLOR);
+  image = cv::imread(imageFile ,cv::IMREAD_COLOR);
+  cout << image.size() << endl;
+  cv::imshow("Birds_Eye", image);
+  cv::waitKey(0);
+  */
+  CameraDriver cameraDriver;
+
+}
+
 int main(){
   int flag;
   cv::Mat image; // used to hold an RGB-image
   image = cv::imread("SimpleRunwayTestImage.png" ,cv::IMREAD_COLOR); // sample image to test the transformation.
   cv::VideoCapture cap("testVideo002.mp4"); // sample video to test the video-processing
   //flag = runHoughTransformationTest(image);  cv::waitKey(0);
-  flag = runVideoTest(cap);
+  //flag = runVideoTest(cap);
+  //flag = calibrateCamera(cv::imread("checkerboard9x6.png" ,cv::IMREAD_COLOR));
+  flag = calibrate();
   return 0;
 }
