@@ -4,23 +4,36 @@
 #include "MovableImageData.h"
 #include "Types.h"
 
-MovableImageData::MovableImageData(cv::Mat raw){ // constructor
+MovableImageData::MovableImageData(cv::Mat raw){ // simple constructor
+  rawImage = new cv::Mat;
+  grayImage = new cv::Mat;
+  movableImageDataDebuglevel = Debuglevel::none;
 }
 
-MovableImageData::MovableImageData(cv::Mat raw, Debuglevel debuglevel){ // constructor
+MovableImageData::MovableImageData(cv::Mat raw, Debuglevel debuglevel){ // constructor with setting level of command-line outputs
+  rawImage = new cv::Mat;
+  *rawImage = raw;
+  grayImage = new cv::Mat;
+  movableImageDataDebuglevel = debuglevel;
 }
 
-MovableImageData::MovableImageData(MovableImageData &&source){ // 4 : move constructor
+MovableImageData::MovableImageData(MovableImageData &&source){ //move constructor
 }
 
-MovableImageData::~MovableImageData(){ // 1 : destructor
+MovableImageData::~MovableImageData(){ // destructor
+  delete rawImage;
+  delete grayImage;
 }
 
-MovableImageData::MovableImageData(const MovableImageData &source){ // 2 : copy constructor
+MovableImageData::MovableImageData(const MovableImageData &source){ // copy constructor
 }
 
-MovableImageData &operator=(const MovableImageData &source){// 3 : copy assignment operator
+MovableImageData &MovableImageData::operator=(const MovableImageData &source){// copy assignment operator
 }
-MovableImageData &operator=(MovableImageData &&source){ // 5 : move assignment operator
+
+MovableImageData &MovableImageData::operator=(MovableImageData &&source){ // move assignment operator
 } 
-   
+
+void MovableImageData::getImageSize(cv::Size& size){ // get /print image size to the command line
+  size = (*rawImage).size();
+}

@@ -194,7 +194,10 @@ int calibrate(){
   Debuglevel debuglevel = Debuglevel::all;
   CameraDriver cameraDriver(debuglevel);
   cameraDriver.calibrate();
-
+  cv::Mat TestMat1, TestMat2;
+  cameraDriver.getIntrinsicMatrix(TestMat1);
+  cameraDriver.getDistortionCoefficients(TestMat2); 
+  return 0;
 }
 
 int main(){

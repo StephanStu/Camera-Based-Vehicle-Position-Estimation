@@ -4,6 +4,7 @@
 #include <opencv2/opencv.hpp>
 
 #include "CameraDriver.h"
+#include "MovableImageData.h"
 #include "Types.h"
 
 /* Implementation of class "CameraDriver" */
@@ -20,7 +21,7 @@ CameraDriver::CameraDriver(){
 }
 
 void CameraDriver::calibrate(){
-  int numberOfBoards = 12;
+  int numberOfBoards = 17;
   float imageScalingFactor = 1.0f;
   int boardWidth = 9;
   int boardHeight = 6;
@@ -41,18 +42,19 @@ void CameraDriver::calibrate(){
       std::cout << "# CameraDriver::calibrate: Added image "<< imageFileName << " to set of calibration images." << std::endl;
     }
     images.push_back(cv::imread(imageFileName, cv::IMREAD_COLOR));
-    std::cout << images.back().size() << std::endl;
+    //std::cout << images.back().size() << std::endl;
   }
   int numberOfTiles = boardWidth * boardHeight;
   cv::Size boardSize = cv::Size(boardWidth, boardHeight);
   std::vector<std::vector<cv::Point2f>> imagePoints;
   std::vector<std::vector<cv::Point3f>> objectPoints;
   cv::Size imageSize;
+  std::vector<cv::Point2f> corners;
   while (images.size() > 0){
     // Find the board
-    std::vector<cv::Point2f> corners;
     bool found = cv::findChessboardCorners(images.back(), boardSize, corners);
     if(found){
+      imageSize = images.back().size();
       drawChessboardCorners(images.back(), boardSize, corners, found);
       if(camerDriverDebuglevel == Debuglevel::verbose){
         std::cout << "# CameraDriver::calibrate: Found the chessboard of size " << boardSize << "." << std::endl;
@@ -78,6 +80,33 @@ void CameraDriver::calibrate(){
     }
   }
   // Calibration step to arrive at camera-matriox and distortion coefficients
-  cv::Mat intrinsicMatrix, distortionCoeffs;
-  double err = cv::calibrateCamera(objectPoints, imagePoints, imageSize, intrinsicMatrix, distortionCoeffs, cv::noArray(), cv::noArray(), cv::CALIB_ZERO_TANGENT_DIST | cv::CALIB_FIX_PRINCIPAL_POINT);  
+  // cv::Mat intrinsicMatrix, distortionCoeffs;
+  double err = cv::calibrateCamera(objectPoints, imagePoints, imageSize, intrinsicMatrix, distortionCoefficients, cv::noArray(), cv::noArray(), cv::CALIB_ZERO_TANGENT_DIST | cv::CALIB_FIX_PRINCIPAL_POINT);  
+  if((camerDriverDebuglevel == Debuglevel::verbose) || (camerDriverDebuglevel == Debuglevel::all)){
+    std::cout << "# CameraDriver::calibrate: Found intrinsic matrix: "<< std::endl;
+    std::cout << intrinsicMatrix << std::endl;
+    std::cout << "# CameraDriver::calibrate: Found distortion coefficients: "<< std::endl;
+    std::cout << distortionCoefficients << std::endl;
+  }
+}
+
+void CameraDriver::getIntrinsicMatrix(cv::Mat& mat){
+  if((camerDriverDebuglevel == Debuglevel::verbose) || (camerDriverDebuglevel == Debuglevel::all)){
+    std::cout << "# CameraDriver::getIntrinsicMatrix: Returning the intrinsic matrix:" << std::endl;
+    std::cout << this->intrinsicMatrix << std::endl;
+  }
+  mat = this->intrinsicMatrix;
+}
+
+void CameraDriver::getDistortionCoefficients(cv::Mat& mat){
+  if((camerDriverDebuglevel == Debuglevel::verbose) || (camerDriverDebuglevel == Debuglevel::all)){
+    std::cout << "# CameraDriver::getDistortionCoefficients: Returning the distortion coefficients:" << std::endl;
+    std::cout << this->distortionCoefficients << std::endl;
+  }
+  mat = this->distortionCoefficients;
+}
+
+MovableImageData CameraDriver::getImageData(){
+  MovableImageData imageData(cv::imread("SimpleRunwayTestImage.png" ,cv::IMREAD_COLOR));
+  return imageData;
 }

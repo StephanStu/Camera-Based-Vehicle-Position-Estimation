@@ -3,6 +3,7 @@
 
 #include <opencv2/opencv.hpp>
 
+#include "MovableImageData.h"
 #include "Types.h"
 
 class CameraDriver{
@@ -11,10 +12,11 @@ class CameraDriver{
   CameraDriver(Debuglevel debuglevel);
   CameraDriver();
   // getters / setters
-  cv::Mat getIntrinsicMatrix();
-  cv::Mat getDistortionCoefficients();
+  void getIntrinsicMatrix(cv::Mat& mat);
+  void getDistortionCoefficients(cv::Mat& mat);
   // typical behaviour methods
   void calibrate();
+  MovableImageData getImageData();
   private:
   // data
   Debuglevel camerDriverDebuglevel;
