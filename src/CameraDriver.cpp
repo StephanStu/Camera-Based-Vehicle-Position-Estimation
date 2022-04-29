@@ -106,7 +106,6 @@ void CameraDriver::getDistortionCoefficients(cv::Mat& mat){
   mat = this->distortionCoefficients;
 }
 
-MovableImageData CameraDriver::getImageData(){
-  MovableImageData imageData(cv::imread("SimpleRunwayTestImage.png" ,cv::IMREAD_COLOR));
-  return imageData;
+void CameraDriver::getImageData(MovableImageData& targetImage){
+  targetImage = MovableImageData(cv::imread("SimpleRunwayTestImage.png" ,cv::IMREAD_COLOR));
 }

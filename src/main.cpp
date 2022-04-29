@@ -7,6 +7,7 @@
 #include <string> 
 
 #include "CameraDriver.h"
+#include "MovableImageData.h"
 #include "Types.h"
 
 using std::vector;
@@ -197,6 +198,7 @@ int calibrate(){
   cv::Mat TestMat1, TestMat2;
   cameraDriver.getIntrinsicMatrix(TestMat1);
   cameraDriver.getDistortionCoefficients(TestMat2); 
+  MovableImageData movableImage(cv::imread("SimpleRunwayTestImage.png" ,cv::IMREAD_COLOR));
   return 0;
 }
 
