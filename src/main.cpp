@@ -192,13 +192,28 @@ int calibrate(){
   cv::imshow("Birds_Eye", image);
   cv::waitKey(0);
   */
-  Debuglevel debuglevel = Debuglevel::all;
+  Debuglevel debuglevel = Debuglevel::verbose;
   CameraDriver cameraDriver(debuglevel);
   cameraDriver.calibrate();
   cv::Mat TestMat1, TestMat2;
   cameraDriver.getIntrinsicMatrix(TestMat1);
   cameraDriver.getDistortionCoefficients(TestMat2); 
-  MovableImageData movableImage(cv::imread("SimpleRunwayTestImage.png" ,cv::IMREAD_COLOR));
+  MovableImageData movableImage01(cv::imread("SimpleRunwayTestImage.png" ,cv::IMREAD_COLOR), debuglevel);
+  MovableImageData movableImage02(cv::imread("SimpleRunwayTestImage.png" ,cv::IMREAD_COLOR), debuglevel);
+  MovableImageData movableImage03(cv::imread("SimpleRunwayTestImage.png" ,cv::IMREAD_COLOR), debuglevel);
+  
+  unsigned long int myLongInt;
+  
+  movableImage02.getCounter(myLongInt);
+  movableImage02.getIdentifier(myLongInt);
+  
+  cv::Mat imageFromCamera;
+  cameraDriver.getRawImage(imageFromCamera);
+  MovableImageData fromCamera(imageFromCamera, debuglevel);
+  fromCamera.getCounter(myLongInt);
+  fromCamera.getIdentifier(myLongInt);
+  
+  
   return 0;
 }
 

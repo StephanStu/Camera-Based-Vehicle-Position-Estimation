@@ -16,7 +16,7 @@ class CameraDriver{
   void getDistortionCoefficients(cv::Mat& mat);
   // typical behaviour methods
   void calibrate();
-  void getImageData(MovableImageData& targetImage);
+  void getRawImage(cv::Mat& targetImage);
   private:
   // data
   Debuglevel camerDriverDebuglevel;
