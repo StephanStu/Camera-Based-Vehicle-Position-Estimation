@@ -5,6 +5,7 @@
 #include <iostream>
 #include <opencv2/opencv.hpp>
 #include <string> 
+#include <opencv2/core/types.hpp>
 
 #include "CameraDriver.h"
 #include "MovableImageData.h"
@@ -19,6 +20,7 @@ using std::string;
 int runHoughTransformationTest(cv::Mat image){
   cv::Mat grayImage; // used for the result of transfroming the RGB-Image to a grayscale-image
   cv::Mat edgesDetected; // used for the result of the Canny-Edge-Detection
+  cv::Mat blurred;
   std::vector<cv::Vec4i> lines; // a vector to store lines of the image, using the cv::Vec4i-Datatype
   if(! image.data ) {
     std::cout <<  "Image not found or unable to open" << std::endl ;
@@ -29,9 +31,15 @@ int runHoughTransformationTest(cv::Mat image){
     */
     cv::cvtColor(image, grayImage, cv::COLOR_BGR2GRAY);
     /*
+    Apply a gaussian Blur
+    */
+    //cv::GaussianBlur(grayImage, image_blurred_with_3x3_kernel, cv::Size(3, 3), 0);
+    cv::Size size(9,9);
+    cv::GaussianBlur(grayImage, blurred, size, 0, 0);
+    /*
     Run the canny-edge-detection 
     */
-    cv::Canny(grayImage, edgesDetected, 50, 200);
+    cv::Canny(blurred, edgesDetected, 50, 200);
     /*
     Run the Hough-Transformation
     */
@@ -217,6 +225,28 @@ int calibrate(){
   return 0;
 }
 
+int drawpoly(){  
+    cv::Mat img(500, 500, CV_8U, cv::Scalar(0));  
+  
+    cv::Point root_points[1][4];  
+    root_points[0][0] = cv::Point(215,220);  
+    root_points[0][1] = cv::Point(460,225);  
+    root_points[0][2] = cv::Point(466,450);  
+    root_points[0][3] = cv::Point(235,465);  
+  
+    const cv::Point* ppt[1] = {root_points[0]};  
+    int npt[] = {4};  
+    //cv::Scalar scale(255);
+    //cv::polylines(img, ppt, npt, 1, 1, scale, 1, 8, 0);  
+    polylines(img, ppt, npt, 1, 1, cv::Scalar(255),1,8,0);  
+    cv::imshow("Test", img);  
+    cv::waitKey();  
+    cv::fillPoly(img, ppt, npt, 1, cv::Scalar(255));  
+    cv::imshow("Test", img);  
+    cv::waitKey(); 
+    return 0;
+}  
+
 int main(){
   int flag;
   cv::Mat image; // used to hold an RGB-image
@@ -225,6 +255,7 @@ int main(){
   //flag = runHoughTransformationTest(image);  cv::waitKey(0);
   //flag = runVideoTest(cap);
   //flag = calibrateCamera(cv::imread("checkerboard9x6.png" ,cv::IMREAD_COLOR));
-  flag = calibrate();
+  // flag = calibrate();
+  flag = drawpoly();
   return 0;
 }

@@ -1,5 +1,5 @@
-#ifndef TRAFFICLIGHT_H
-#define TRAFFICLIGHT_H
+#ifndef TYPES_H
+#define TYPES_H
 
 enum Debuglevel {none, verbose, all}; // level of command line outputs / log-level
 

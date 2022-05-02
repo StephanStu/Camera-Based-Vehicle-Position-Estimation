@@ -73,6 +73,16 @@ void MovableImageData::convert2GrayImage(){ // set the gray image in the image d
   cv::cvtColor(*rawImage, *grayImage, cv::COLOR_BGR2GRAY);
 }
 
+void MovableImageData::applyGausianBlur(){ // applies a Gaussian Noise kernel to the image
+  cv::Size size(9,9);
+  cv::GaussianBlur(*grayImage, *gausianBlurredImage, size, 0, 0);
+
+}
+
+void MovableImageData::applyRegionOfInterest(){ // Only keeps the region of the image defined by the polygon formed from `vertices`. The rest of the image is set to black.
+
+}
+
 void MovableImageData::detectEdges(){ // detect edges in the gray image
 
 }
