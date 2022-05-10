@@ -2,6 +2,7 @@
 #define MOVABLEIMAGEDATA_H
 
 #include <opencv2/opencv.hpp>
+#include "CameraDriver.h"
 #include "Types.h"
 
 class MovableImageData{
@@ -13,23 +14,16 @@ class MovableImageData{
     MovableImageData(MovableImageData &&source); // move constructor
     MovableImageData(const MovableImageData &source); // copy constructor
     MovableImageData &operator=(MovableImageData &&source); // move assignment operator
-    void getImageSize(cv::Size& size); // get / print size of the image to the commandline
+    void getRawImageSize(cv::Size& size); // get / print size of the image to the commandline
     void getIdentifier(unsigned long int& id); // get / print identifier of instance
     void getCounter(unsigned long int& n); // get number of instances
-    void getGrayImage(cv::Mat& gray); // get the gray image from the image data set
+    void getRawImage(cv::Mat& raw); // get the gray image from the image data set
     private:
+    const int kernelsize = 5; 
     cv::Mat *rawImage; // raw image captured with camera
-    cv::Mat *grayImage; // raw image converted to gray scale
-    cv::Mat *edgesDetected; // image with edges detected by Canny-Transformation
-    cv::Mat *gausianBlurredImage; // image wiuth gaussian blurr applied
-    cv::Mat *maskedImage; // image with region of interest applied
     Debuglevel movableImageDataDebuglevel; // level of command line output useful in debugging
     unsigned long int identifier; // identifier, incremented when a new instance is created
     static unsigned long int counter; // number of image-data-instances created during runtime
-    void convert2GrayImage(); // set the gray image in the image data set based on the raw image (assumed to be colored)
-    void detectEdges(); // detect edges in the gray image
-    void applyGausianBlur(); // applies a Gaussian Noise kernel to the image
-    void applyRegionOfInterest(); // Only keeps the region of the image defined by the polygon formed from `vertices`. The rest of the image is set to black.
 };
 
 #endif

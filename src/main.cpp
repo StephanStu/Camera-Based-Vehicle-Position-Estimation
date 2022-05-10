@@ -9,6 +9,7 @@
 
 #include "CameraDriver.h"
 #include "MovableImageData.h"
+#include "ImageServer.h"
 #include "Types.h"
 
 using std::vector;
@@ -16,6 +17,8 @@ using std::cout;
 using std::cerr;
 using std::endl;
 using std::string;
+
+#define PI 3.1415926
  
 int runHoughTransformationTest(cv::Mat image){
   cv::Mat grayImage; // used for the result of transfroming the RGB-Image to a grayscale-image
@@ -247,6 +250,204 @@ int drawpoly(){
     return 0;
 }  
 
+int transform2BirdsEyeView(){
+  /* Luiteture cited https://www.researchgate.net/publication/224195999_Distance_determination_for_an_automobile_environment_using_Inverse_Perspective_Mapping_in_OpenCV/link/00b4951c994745bf6b000000/download
+  https://gist.github.com/anujonthemove/7b35b7c1e05f01dd11d74d94784c1e58
+  */
+  
+  
+  // mat container to receive images
+  cv::Mat source, destination;
+  source = cv::imread("SimpleRunwayTestImage.png" ,cv::IMREAD_COLOR); 
+  int alpha_ = 90, beta_ = 90, gamma_ = 90;
+  int f_ = 10, dist_ = 10;
+  int frameWidth = 640; 
+  int frameHeight = 480;
+  cv::namedWindow("Result", 1);
+  cv::resize(source, source, cv::Size(frameWidth, frameHeight));
+  double focalLength, dist, alpha, beta, gamma; 
+  alpha =((double)alpha_ -90) * PI/180;
+  beta =((double)beta_ -90) * PI/180;
+  gamma =((double)gamma_ -90) * PI/180;
+  focalLength = (double)f_;
+  dist = (double)dist_;
+  cv::Size image_size = source.size();
+  double w = (
+              double)image_size.width, h = (double)image_size.height;
+  // Projecion matrix 2D -> 3D
+  cv::Mat A1 = (cv::Mat_<float>(4, 3)<< 
+			1, 0, -w/2,
+			0, 1, -h/2,
+			0, 0, 0,
+			0, 0, 1 );
+
+	
+	// Rotation matrices Rx, Ry, Rz
+	cv::Mat RX = (cv::Mat_<float>(4, 4) << 
+			1, 0, 0, 0,
+			0, cos(alpha), -sin(alpha), 0,
+			0, sin(alpha), cos(alpha), 0,
+			0, 0, 0, 1 );
+	cv::Mat RY = (cv::Mat_<float>(4, 4) << 
+			cos(beta), 0, -sin(beta), 0,
+			0, 1, 0, 0,
+			sin(beta), 0, cos(beta), 0,
+			0, 0, 0, 1	);
+	cv::Mat RZ = (cv::Mat_<float>(4, 4) << 
+			cos(gamma), -sin(gamma), 0, 0,
+			sin(gamma), cos(gamma), 0, 0,
+			0, 0, 1, 0,
+			0, 0, 0, 1	);
+	// R - rotation matrix
+	cv::Mat R = RX * RY * RZ;
+	// T - translation matrix
+	cv::Mat T = (cv::Mat_<float>(4, 4) << 
+			1, 0, 0, 0,  
+			0, 1, 0, 0,  
+			0, 0, 1, dist,  
+			0, 0, 0, 1); 
+	// K - intrinsic matrix 
+    cv::Mat K = (cv::Mat_<float>(3, 4) << 
+			focalLength, 0, w/2, 0,
+			0, focalLength, h/2, 0,
+			0, 0, 1, 0
+			); 
+	cv::Mat transformationMat = K * (T * (R * A1));
+
+	cv::warpPerspective(source, destination, transformationMat, image_size, cv::INTER_CUBIC | cv::WARP_INVERSE_MAP);
+
+	cv::imshow("Result", destination);
+	cv::waitKey(0);
+    return 0;
+}
+
+int calibratePerspectiveTransformation(){
+  cv::Mat image = cv::imread("test/test01.jpg" ,cv::IMREAD_COLOR);
+  cv::Size size;
+  size = image.size();
+  std::cout << size <<std::endl;
+  cv::Point2f objPts[4], imgPts[4];
+  // Calibrweted with 800 x 582 image
+  objPts[0].x = 696; objPts[0].y = 455; 
+  objPts[1].x = 1096; objPts[1].y = 719;
+  objPts[2].x = 206; objPts[2].y = 719; 
+  objPts[3].x = 587; objPts[3].y = 455; 
+  
+  // Calibrweted with 800 x 582 image
+  imgPts[0].x = 930; imgPts[0].y = 0; // Top-Right
+  imgPts[1].x = 930; imgPts[1].y = 719; // Bottom-Right
+  imgPts[2].x = 350; imgPts[2].y = 719; // Bottom-Left
+  imgPts[3].x = 350; imgPts[3].y = 0; // Top-Left
+    
+  /*imgPts[0].x = 
+  imgPts[1].y = 
+  imgPts[1].x = 
+  imgPts[1].y = 
+  imgPts[2].x = 
+  imgPts[2].y = 
+  imgPts[3].y = 
+  imgPts[3].y = */
+  // DRAW THE POINTS in order: B,G,R,YELLOW
+  int objPtsRadius = 12;
+  int imgPtsRadius = 9;
+  cv::circle(image, objPts[0], objPtsRadius, cv::Scalar(255, 0, 0), 3);
+  cv::circle(image, objPts[1], objPtsRadius, cv::Scalar(255, 0, 0), 3);
+  cv::circle(image, objPts[2], objPtsRadius, cv::Scalar(255, 0, 0), 3);
+  cv::circle(image, objPts[3], objPtsRadius, cv::Scalar(255, 0, 0), 3);
+  cv::circle(image, imgPts[0], imgPtsRadius, cv::Scalar(255, 255, 255), 3);
+  cv::circle(image, imgPts[1], imgPtsRadius, cv::Scalar(255, 255, 255), 3);
+  cv::circle(image, imgPts[2], imgPtsRadius, cv::Scalar(255, 255, 255), 3);
+  cv::circle(image, imgPts[3], imgPtsRadius, cv::Scalar(255, 255, 255), 3);
+  
+  /*
+  
+      if not src:
+            src = np.float32([[696, 455],
+                             [1096, 719],
+                             [206, 719],
+                             [587, 455]])
+        if not dst:
+            dst = np.float32([[930, 0],
+                             [930, 719],
+                             [350, 719],
+                             [350, 0]])
+
+        #get transformation matrix
+        M = cv2.getPerspectiveTransform(src, dst)
+        #get inverse transformation matrix
+        Minv = cv2.getPerspectiveTransform(dst, src)
+  
+  */
+  
+  
+  cv::Mat H = cv::getPerspectiveTransform(objPts, imgPts);
+  cv::Mat HInv = cv::getPerspectiveTransform(imgPts, objPts);
+  std::cout << H << std::endl;
+  
+  
+  cv::imshow("Test-Image", image);
+  cv::waitKey(0);
+  
+  cout << "\nPress 'd' for lower birdseye view, and 'u' for higher (it adjusts the apparent 'Z' height), Esc to exit" << endl;
+  double Z = 15;
+  cv::Mat birds_image;
+  //cv::Size birds_image_size(280, 230);
+  for (;;) {
+    // escape key stops
+    H.at<double>(2, 2) = Z;
+    // USE HOMOGRAPHY TO REMAP THE VIEW
+    //
+    cv::warpPerspective(image,			// Source image
+                        birds_image, 	// Output image
+                        H,              // Transformation matrix
+                        image.size(),   // Size for output image
+                        cv::INTER_LINEAR, // cv::WARP_INVERSE_MAP | cv::INTER_LINEAR,
+                        cv::BORDER_CONSTANT, cv::Scalar::all(0) // Fill border with black
+                        );
+    cv::imshow("Birds_Eye", birds_image);
+    int key = cv::waitKey() & 255;
+    if (key == 'u')
+      Z += 0.5;
+    if (key == 'd')
+      Z -= 0.5;
+    if (key == 27)
+      break;
+  }
+  
+  return 0;
+}
+
+int testMovableImageData(){
+  cv::Mat image = cv::imread("test/test01.jpg" ,cv::IMREAD_COLOR);
+  cv::Mat result;
+  cv::Size size;
+  size = image.size();
+  Debuglevel debuglevel = Debuglevel::verbose;
+  MovableImageData movableImage(image, debuglevel);
+  movableImage.getRawImageSize(size); // TESTED::OK
+  movableImage.getRawImage(result); // TESTED::OK
+  imshow("Original", image);
+  imshow("Processed", result);
+  cv::waitKey(0);  
+  return 0;
+}
+
+int testImageServer(){
+  Debuglevel debuglevel = Debuglevel::verbose;
+  ImageServer imageServer(debuglevel);
+  cv::Mat image = cv::imread("test/test01.jpg" ,cv::IMREAD_COLOR);
+  cv::Mat result;
+  CameraDriver camera(debuglevel);
+  camera.calibrate();
+  //imageServer.convert2GrayImage(image, result); // TESTED::OK
+  //imageServer.applyGausianBlurr(image, result); // TESTED::OK
+  imageServer.undistortImage(camera, image, result); // TESTED::OK
+  imshow("Original", image);
+  imshow("Processed", result);
+  cv::waitKey(0);
+  return 0;
+}
+
 int main(){
   int flag;
   cv::Mat image; // used to hold an RGB-image
@@ -256,6 +457,10 @@ int main(){
   //flag = runVideoTest(cap);
   //flag = calibrateCamera(cv::imread("checkerboard9x6.png" ,cv::IMREAD_COLOR));
   // flag = calibrate();
-  flag = drawpoly();
+  //flag = drawpoly();
+  //flag = transform2BirdsEyeView();
+  //flag = calibratePerspectiveTransformation();
+  flag = testMovableImageData();
+  //flag = testImageServer();
   return 0;
 }

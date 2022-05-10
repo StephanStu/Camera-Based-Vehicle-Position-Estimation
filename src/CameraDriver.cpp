@@ -4,7 +4,6 @@
 #include <opencv2/opencv.hpp>
 
 #include "CameraDriver.h"
-#include "MovableImageData.h"
 #include "Types.h"
 
 /* Implementation of class "CameraDriver" */

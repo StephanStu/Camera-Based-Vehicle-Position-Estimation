@@ -3,7 +3,6 @@
 
 #include <opencv2/opencv.hpp>
 
-#include "MovableImageData.h"
 #include "Types.h"
 
 class CameraDriver{
