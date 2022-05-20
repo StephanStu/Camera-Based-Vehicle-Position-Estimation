@@ -323,21 +323,21 @@ int transform2BirdsEyeView(){
 
 int calibratePerspectiveTransformation(){
   cv::Mat image = cv::imread("test/test01.jpg" ,cv::IMREAD_COLOR);
-  cv::Size size;
-  size = image.size();
+  cv::Size size(500,600);
+  //size = image.size();
   std::cout << size <<std::endl;
   cv::Point2f objPts[4], imgPts[4];
   // Calibrweted with 800 x 582 image
-  objPts[0].x = 696; objPts[0].y = 455; 
-  objPts[1].x = 1096; objPts[1].y = 719;
-  objPts[2].x = 206; objPts[2].y = 719; 
-  objPts[3].x = 587; objPts[3].y = 455; 
+  objPts[0].x = 375; objPts[0].y = 480; 
+  objPts[1].x = 905; objPts[1].y = 480;
+  objPts[2].x = 1811; objPts[2].y = 685; 
+  objPts[3].x = -531; objPts[3].y = 685; 
   
   // Calibrweted with 800 x 582 image
-  imgPts[0].x = 930; imgPts[0].y = 0; // Top-Right
-  imgPts[1].x = 930; imgPts[1].y = 719; // Bottom-Right
-  imgPts[2].x = 350; imgPts[2].y = 719; // Bottom-Left
-  imgPts[3].x = 350; imgPts[3].y = 0; // Top-Left
+  imgPts[0].x = 0; imgPts[0].y = 0; // Top-Right
+  imgPts[1].x = 500; imgPts[1].y = 0; // Bottom-Right
+  imgPts[2].x = 500; imgPts[2].y = 600; // Bottom-Left
+  imgPts[3].x = 0; imgPts[3].y = 600; // Top-Left
     
   /*imgPts[0].x = 
   imgPts[1].y = 
@@ -389,7 +389,7 @@ int calibratePerspectiveTransformation(){
   cv::waitKey(0);
   
   cout << "\nPress 'd' for lower birdseye view, and 'u' for higher (it adjusts the apparent 'Z' height), Esc to exit" << endl;
-  double Z = 15;
+  double Z = 1;
   cv::Mat birds_image;
   //cv::Size birds_image_size(280, 230);
   for (;;) {
@@ -400,7 +400,7 @@ int calibratePerspectiveTransformation(){
     cv::warpPerspective(image,			// Source image
                         birds_image, 	// Output image
                         H,              // Transformation matrix
-                        image.size(),   // Size for output image
+                        size,   // Size for output image. Before: image.size()
                         cv::INTER_LINEAR, // cv::WARP_INVERSE_MAP | cv::INTER_LINEAR,
                         cv::BORDER_CONSTANT, cv::Scalar::all(0) // Fill border with black
                         );
@@ -408,8 +408,10 @@ int calibratePerspectiveTransformation(){
     int key = cv::waitKey() & 255;
     if (key == 'u')
       Z += 0.5;
+      std::cout << Z << std::endl;
     if (key == 'd')
       Z -= 0.5;
+      std::cout << Z << std::endl;
     if (key == 27)
       break;
   }
@@ -435,16 +437,57 @@ int testMovableImageData(){
 int testImageServer(){
   Debuglevel debuglevel = Debuglevel::verbose;
   ImageServer imageServer(debuglevel);
-  cv::Mat image = cv::imread("test/test01.jpg" ,cv::IMREAD_COLOR);
+  //cv::Mat image = cv::imread("test/test01.jpg" ,cv::IMREAD_COLOR); // size is 1280 x 720
+  cv::Mat image = cv::imread("SimpleRunwayTestImage.png" ,cv::IMREAD_COLOR); // size is 800 x 582, sample image to test the transformation.
+  cv::resize(image, image, cv::Size(1280, 720));
+  std::cout << image.size() << std::endl;
   cv::Mat result;
   CameraDriver camera(debuglevel);
   camera.calibrate();
   //imageServer.convert2GrayImage(image, result); // TESTED::OK
   //imageServer.applyGausianBlurr(image, result); // TESTED::OK
-  imageServer.undistortImage(camera, image, result); // TESTED::OK
+  //imageServer.undistortImage(camera, image, result); // TESTED::OK
+  imageServer.convert2BirdsEyeView(image, result); // TESTED::OK
   imshow("Original", image);
   imshow("Processed", result);
   cv::waitKey(0);
+  return 0;
+}
+
+int testImageServerWithVideo(){
+  Debuglevel debuglevel = Debuglevel::verbose;
+  ImageServer imageServer(debuglevel);
+  cv::VideoCapture cap("testVideo002.mp4");
+  cv::Mat frame;
+  cv::Mat result;
+  // Check if camera opened successfully
+  if(!cap.isOpened()){
+    std::cout << "Error opening video stream or file" << std::endl;
+    return -1;
+  }
+  while(1){
+    // Capture frame-by-frame
+    cap >> frame;
+    // If the frame is empty, break immediately
+    if (frame.empty()){
+      break;
+    }
+    // Display the resulting frame
+    //imshow( "Frame", frame );
+    cv::resize(frame, frame, cv::Size(1280, 720));
+    imageServer.convert2BirdsEyeView(frame, result); 
+    imshow("Original frame", frame);
+    imshow("Processed frame", result);
+    // Press  ESC on keyboard to exit
+    char c=(char)cv::waitKey(25);
+    if(c==27){
+      break;
+    }
+  }
+  // When everything done, release the video capture object
+  cap.release();
+  // Closes all the frames
+  cv::destroyAllWindows();
   return 0;
 }
 
@@ -460,7 +503,8 @@ int main(){
   //flag = drawpoly();
   //flag = transform2BirdsEyeView();
   //flag = calibratePerspectiveTransformation();
-  flag = testMovableImageData();
+  //flag = testMovableImageData();
   //flag = testImageServer();
+  flag = testImageServerWithVideo();
   return 0;
 }
