@@ -13,10 +13,16 @@ CameraDriver::CameraDriver(Debuglevel debuglevel){
   if((debuglevel == Debuglevel::verbose) || (debuglevel == Debuglevel::all)){
     std::cout << "# CameraDriver::CameraDriver called." << std::endl;
   }
+  // use a sample image as "the next raw image made available"
+  rawImage = cv::imread("SimpleRunwayTestImage.png" ,cv::IMREAD_COLOR);
+  cv::resize(rawImage, rawImage, cv::Size(1280, 720));
 }
 
 CameraDriver::CameraDriver(){
   camerDriverDebuglevel = Debuglevel::none;
+  // use a sample image as "the next raw image made available"
+  rawImage = cv::imread("SimpleRunwayTestImage.png" ,cv::IMREAD_COLOR);
+  cv::resize(rawImage, rawImage, cv::Size(1280, 720));
 }
 
 void CameraDriver::calibrate(){
@@ -89,22 +95,29 @@ void CameraDriver::calibrate(){
   }
 }
 
-void CameraDriver::getIntrinsicMatrix(cv::Mat& mat){
+void CameraDriver::getIntrinsicMatrix(cv::Mat& matrix){
   if((camerDriverDebuglevel == Debuglevel::verbose) || (camerDriverDebuglevel == Debuglevel::all)){
     std::cout << "# CameraDriver::getIntrinsicMatrix: Returning the intrinsic matrix:" << std::endl;
     std::cout << this->intrinsicMatrix << std::endl;
   }
-  mat = this->intrinsicMatrix;
+  matrix = this->intrinsicMatrix;
 }
 
-void CameraDriver::getDistortionCoefficients(cv::Mat& mat){
+void CameraDriver::getDistortionCoefficients(cv::Mat& matrix){
   if((camerDriverDebuglevel == Debuglevel::verbose) || (camerDriverDebuglevel == Debuglevel::all)){
     std::cout << "# CameraDriver::getDistortionCoefficients: Returning the distortion coefficients:" << std::endl;
     std::cout << this->distortionCoefficients << std::endl;
   }
-  mat = this->distortionCoefficients;
+  matrix = this->distortionCoefficients;
 }
 
-void CameraDriver::getRawImage(cv::Mat& targetImage){
-  targetImage = cv::imread("SimpleRunwayTestImage.png" ,cv::IMREAD_COLOR);
+void CameraDriver::getRawImage(cv::Mat& destination){
+  destination = rawImage;
+}
+
+void CameraDriver::getUndistortedImage(cv::Mat& destination){// using (a reference to) the camera's intrinsic matrix & distortion-coefficients this method undistorts the source image
+  if((camerDriverDebuglevel == Debuglevel::verbose) || (camerDriverDebuglevel == Debuglevel::all)){
+    std::cout << "# CameraDriver::getUndistortedImage called." << std::endl;
+  }
+  cv::undistort(rawImage, destination, intrinsicMatrix, distortionCoefficients);  
 }

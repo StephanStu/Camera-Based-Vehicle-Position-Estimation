@@ -11,16 +11,18 @@ class CameraDriver{
   CameraDriver(Debuglevel debuglevel);
   CameraDriver();
   // getters / setters
-  void getIntrinsicMatrix(cv::Mat& mat);
-  void getDistortionCoefficients(cv::Mat& mat);
+  void getIntrinsicMatrix(cv::Mat& matrix);
+  void getDistortionCoefficients(cv::Mat& matrix);
   // typical behaviour methods
   void calibrate();
-  void getRawImage(cv::Mat& targetImage);
+  void getRawImage(cv::Mat& destination);
+  void getUndistortedImage(cv::Mat& destination);
   private:
   // data
   Debuglevel camerDriverDebuglevel;
   cv::Mat intrinsicMatrix;
   cv::Mat distortionCoefficients;
+  cv::Mat rawImage;
   // typical behaviour methods
 };
 

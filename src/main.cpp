@@ -6,6 +6,12 @@
 #include <opencv2/opencv.hpp>
 #include <string> 
 #include <opencv2/core/types.hpp>
+#include <thread>
+#include <queue>
+#include <future>
+#include <mutex>
+#include <algorithm>  // std::for_each
+#include <memory>
 
 #include "CameraDriver.h"
 #include "MovableImageData.h"
@@ -444,10 +450,10 @@ int testImageServer(){
   cv::Mat result;
   CameraDriver camera(debuglevel);
   camera.calibrate();
-  //imageServer.convert2GrayImage(image, result); // TESTED::OK
-  //imageServer.applyGausianBlurr(image, result); // TESTED::OK
-  //imageServer.undistortImage(camera, image, result); // TESTED::OK
-  imageServer.convert2BirdsEyeView(image, result); // TESTED::OK
+  imageServer.applyGausianBlurr(result, result); // TESTED::OK
+  imageServer.convert2GrayImage(result, result); // TESTED::OK
+  imageServer.convert2BirdsEyeView(result, result); // TESTED::OK
+  imageServer.convert2BinaryImage(result, result); // TESTED::OK
   imshow("Original", image);
   imshow("Processed", result);
   cv::waitKey(0);
@@ -457,6 +463,8 @@ int testImageServer(){
 int testImageServerWithVideo(){
   Debuglevel debuglevel = Debuglevel::verbose;
   ImageServer imageServer(debuglevel);
+  CameraDriver camera(debuglevel);
+  camera.calibrate();
   cv::VideoCapture cap("testVideo002.mp4");
   cv::Mat frame;
   cv::Mat result;
@@ -475,7 +483,13 @@ int testImageServerWithVideo(){
     // Display the resulting frame
     //imshow( "Frame", frame );
     cv::resize(frame, frame, cv::Size(1280, 720));
-    imageServer.convert2BirdsEyeView(frame, result); 
+    
+    //imageServer.convert2BirdsEyeView(frame, result); 
+    imageServer.applyGausianBlurr(result, result); // TESTED::OK
+    imageServer.convert2GrayImage(result, result); // TESTED::OK
+    imageServer.convert2BirdsEyeView(result, result); // TESTED::OK
+    imageServer.convert2BinaryImage(result, result); // TESTED::OK
+    
     imshow("Original frame", frame);
     imshow("Processed frame", result);
     // Press  ESC on keyboard to exit
@@ -489,6 +503,47 @@ int testImageServerWithVideo(){
   // Closes all the frames
   cv::destroyAllWindows();
   return 0;
+}
+
+int testImageQueue(){
+  Debuglevel debuglevel = Debuglevel::verbose;
+  // create monitor object as a shared pointer to enable access by multiple threads
+  std::shared_ptr<ImageServer> point2ImageServer(new ImageServer(debuglevel));
+  std::cout << "# INITIALIZE" << std::endl;
+  std::cout << "# RUNNING" << std::endl;
+  std::vector<std::future<void>> futures;
+  for (int i = 0; i < 10; ++i){
+    cv::Mat image; // used to hold an RGB-image
+    image = cv::imread("SimpleRunwayTestImage.png" ,cv::IMREAD_COLOR); 
+    futures.emplace_back(std::async(std::launch::async, &ImageServer::addImageToQueue, point2ImageServer, std::move(image)));
+  }
+  cv::Mat result = point2ImageServer->getImageFromQueue();
+  imshow("Processed", result);
+  cv::waitKey(0);
+  return 0;
+}
+
+int testIsCvMatMoveable(cv::Mat &&image){
+  std::cout << "Here is the image that has been moved." << std::endl;
+  imshow("Original", image);
+  cv::waitKey(0);
+  return 0;
+}
+
+int testUniqueAccess2Camera(){
+  Debuglevel debuglevel = Debuglevel::verbose;
+  std::unique_ptr<CameraDriver> cameraAccess(new CameraDriver(debuglevel));
+  cameraAccess->calibrate();
+  
+  std::shared_ptr<ImageServer> imageServerAccess(new ImageServer(debuglevel));
+  
+  cv::Mat image;
+  
+  cameraAccess->getUndistortedImage(image);
+  
+  
+  
+  return testIsCvMatMoveable(std::move(image));
 }
 
 int main(){
@@ -506,5 +561,8 @@ int main(){
   //flag = testMovableImageData();
   //flag = testImageServer();
   flag = testImageServerWithVideo();
+  //flag = testImageQueue();
+  //flag = testIsCvMatMoveable(std::move(image)); // OK, that works
+  //flag = testUniqueAccess2Camera();
   return 0;
 }

@@ -22,7 +22,59 @@ ImageServer::ImageServer(){
   setBirdsEyeTransformMatrix();
 }
 
+void ImageServer::addImageToQueue(cv::Mat &&image){
+  // perform modification under the lock
+  cv::Size size = image.size();
+  std::lock_guard<std::mutex> uLock(queueMutex);
+  imageQueue.push_back(std::move(image));
+  // notify clients
+  queueCondition.notify_one(); 
+  if((imageServerDebuglevel == Debuglevel::verbose) || (imageServerDebuglevel == Debuglevel::all)){
+    std::cout << "# ImageServer::addImageToQueue called. Adding another image of size " << size << " to the queue. " << std::endl;
+    std::cout << "# ImageServer::imageQueue is now of size " << imageQueue.size() << std::endl;
+  }
+}
+
+cv::Mat ImageServer::getImageFromQueue(){
+  /*In the method popBack, we need to create the lock first - it can not be a lock_guard any more as we need to pass it to the condition variable - to its method wait. Thus it must be a unique_lock. Now we can enter the wait state while at same time releasing the lock. It is only inside wait, that the mutex is temporarily unlocked - which is a very important point to remember: We are holding the lock before AND after our call to wait - which means that we are free to access whatever data is protected by the mutex. */
+  // perform queue modification under the lock
+  std::unique_lock<std::mutex> uLock(queueMutex);
+  /*If the vector is empty, wait is called. When the thread wakes up again, the condition is immediately re-checked and - in case it has not been a spurious wake-up we can continue with our job and retrieve the vector.*/
+  if((imageServerDebuglevel == Debuglevel::verbose) || (imageServerDebuglevel == Debuglevel::all)){
+    if(imageQueue.empty()){
+      std::cout << "# ImageServer::getImageFromQueue called. Image queue is currently empty." << std::endl;
+    }
+  }
+  queueCondition.wait(uLock, [this] { return !imageQueue.empty(); }); // pass unique lock to condition variable
+  // remove last vector element from queue
+  cv::Mat result = std::move(imageQueue.back());
+  imageQueue.pop_back();
+  if((imageServerDebuglevel == Debuglevel::verbose) || (imageServerDebuglevel == Debuglevel::all)){
+    std::cout << "# ImageServer::getImageFromQueue called. Popping an image from the queue. " << std::endl;
+    std::cout << "# ImageServer::imageQueue is now of size " << imageQueue.size() << std::endl;
+  }
+  /*Pipeline for image processing starts here*/
+  applyGausianBlurr(result, result);
+  convert2GrayImage(result, result); 
+  convert2BirdsEyeView(result, result);
+  convert2BinaryImage(result, result);
+  /*Pipeline for image processing ends here*/
+  return result; // will not be copied due to return value optimization (RVO) in C++
+}
+
+void ImageServer::convert2BinaryImage(cv::Mat& source, cv::Mat& destination){
+  if((imageServerDebuglevel == Debuglevel::verbose) || (imageServerDebuglevel == Debuglevel::all)){
+    std::cout << "# ImageServer::convert2BinaryImage called." << std::endl;
+  }
+  //int maxBinaryValue = 255;
+  //int thresholdValue = 50;
+  cv::threshold(source, destination, binaryThresholdValue, maxBinaryValue, cv::THRESH_BINARY);
+}
+
 void ImageServer::convert2BirdsEyeView(cv::Mat& source, cv::Mat& destination){
+  if((imageServerDebuglevel == Debuglevel::verbose) || (imageServerDebuglevel == Debuglevel::all)){
+    std::cout << "# ImageServer::convert2BirdsEyeView called." << std::endl;
+  }
   cv::Size birdsEyeImageSize(birdsEyeImageWidth, birdsEyeImageHeight);
   cv::warpPerspective(source,			// Source image
                         destination, 	// Destination image
@@ -73,16 +125,5 @@ void ImageServer::applyGausianBlurr(cv::Mat& source, cv::Mat& destination){ // a
   cv::GaussianBlur(source, destination, size, 0, 0);
 }
 
-void ImageServer::maskImage(cv::Mat& source, cv::Mat& destination){ // keep the region of the image defined by the polygon formed from `vertices`. The rest of the image is set to black.
-}
-
-void ImageServer::undistortImage(CameraDriver& camera, cv::Mat& source, cv::Mat& destination){ // using (a reference to) the camera's intrinsic matrix & distortion-coefficients this method undistorts the source image
-  cv::Mat intrinsicMatrix;
-  cv::Mat distortionCoefficients;
-  camera.getIntrinsicMatrix(intrinsicMatrix);
-  camera.getDistortionCoefficients(distortionCoefficients);
-  if((imageServerDebuglevel == Debuglevel::verbose) || (imageServerDebuglevel == Debuglevel::all)){
-    std::cout << "#  ImageServer::undistortImage called." << std::endl;
-  }
-  cv::undistort(source, destination, intrinsicMatrix, distortionCoefficients);  
+void ImageServer::maskBirdsEyeImage(cv::Mat& source, cv::Mat& destination){ // keep the region of the image defined by the polygon formed from `vertices`. The rest of the image is set to black.
 }
