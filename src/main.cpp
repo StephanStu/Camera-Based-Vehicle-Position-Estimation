@@ -560,8 +560,8 @@ int main(){
   //flag = calibratePerspectiveTransformation();
   //flag = testMovableImageData();
   //flag = testImageServer();
-  flag = testImageServerWithVideo();
-  //flag = testImageQueue();
+  //flag = testImageServerWithVideo();
+  flag = testImageQueue();
   //flag = testIsCvMatMoveable(std::move(image)); // OK, that works
   //flag = testUniqueAccess2Camera();
   return 0;

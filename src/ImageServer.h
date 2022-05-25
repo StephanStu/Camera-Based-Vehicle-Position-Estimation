@@ -3,7 +3,6 @@
 
 #include <opencv2/opencv.hpp>
 #include <future>
-#include <memory>
 
 #include "CameraDriver.h"
 
@@ -44,7 +43,6 @@ class ImageServer{
   const int binaryThresholdValue = 90; // value of the grayscale(!) pixels that are converted to maxBinaryValue in the bird eye's image; anything below that value is converted to zero = "black". 
   cv::Mat birdsEyeTransformMatrix; // Matrix for bird's eye perspective transform
   // typical behaviour methods
-  void pullImageFromCameraDriver(CameraDriver& camera);
   void setBirdsEyeTransformMatrix();
 };
 
