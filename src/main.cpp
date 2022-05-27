@@ -17,6 +17,10 @@
 #include "MovableImageData.h"
 #include "ImageServer.h"
 #include "Types.h"
+#include "MessageQueue.h"
+
+#include "RunnableEntity.h"
+#include "PositionServer.h"
 
 using std::vector;
 using std::cout;
@@ -511,12 +515,16 @@ int testImageQueue(){
   std::shared_ptr<ImageServer> point2ImageServer(new ImageServer(debuglevel));
   std::cout << "# INITIALIZE" << std::endl;
   std::cout << "# RUNNING" << std::endl;
-  std::vector<std::future<void>> futures;
+  /*std::vector<std::future<void>> futures;
   for (int i = 0; i < 10; ++i){
     cv::Mat image; // used to hold an RGB-image
     image = cv::imread("SimpleRunwayTestImage.png" ,cv::IMREAD_COLOR); 
     futures.emplace_back(std::async(std::launch::async, &ImageServer::addImageToQueue, point2ImageServer, std::move(image)));
-  }
+  }*/
+  cv::Mat image = cv::imread("test/test01.jpg" ,cv::IMREAD_COLOR);
+  imshow("Original", image);
+  //cv::Mat image = cv::imread("SimpleRunwayTestImage.png" ,cv::IMREAD_COLOR); 
+  std::async(std::launch::async, &ImageServer::addImageToQueue, point2ImageServer, std::move(image));
   cv::Mat result = point2ImageServer->getImageFromQueue();
   imshow("Processed", result);
   cv::waitKey(0);
@@ -546,6 +554,13 @@ int testUniqueAccess2Camera(){
   return testIsCvMatMoveable(std::move(image));
 }
 
+int testRunnableEntity(){
+  Debuglevel debuglevel = Debuglevel::verbose;
+  PositionServer positionServer(debuglevel);
+  positionServer.run();
+  return 0;
+}
+
 int main(){
   int flag;
   cv::Mat image; // used to hold an RGB-image
@@ -561,8 +576,9 @@ int main(){
   //flag = testMovableImageData();
   //flag = testImageServer();
   //flag = testImageServerWithVideo();
-  flag = testImageQueue();
+  //flag = testImageQueue();
   //flag = testIsCvMatMoveable(std::move(image)); // OK, that works
   //flag = testUniqueAccess2Camera();
+  flag = testRunnableEntity();
   return 0;
 }
