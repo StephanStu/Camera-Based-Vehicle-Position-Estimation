@@ -1,21 +1,30 @@
-#ifndef MESSAGEQUEUE_H
-#define MESSAGEQUEUE_H
+#ifndef IMAGESERVER_H
+#define IMAGESERVER_H
 
 #include <mutex>
 #include <deque>
 #include <condition_variable>
+#include <opencv2/opencv.hpp>
+#include "RunnableEntity.h"
+#include "Types.h"
 
-template <class T>
-class MessageQueue
-{
-public:
-    void addItemToQueue(T &&item);
-    T getItemFromQueue();
-    
-private:
-	std::mutex mutex;
-    std::condition_variable condition;
-    std::deque<T> queue;  
+/*
+ImageServer:
+*/
+
+class ImageServer : public RunnableEntity {
+  public:
+    // constructor / desctructor
+    //ImageServer(Debuglevel imageServerDebugLevel);
+    //ImageServer();
+    // other
+
+  protected:
+    void addImageToQueue(cv::Mat &&image); // adds an image to the queue using std::move()
+    cv::Mat getImageFromQueue(); // pops an image from the queue
+	std::mutex queueProtection; // this mutex is shared by all objects for protecting access to the queues
+    std::condition_variable condition; // condition varibale is needed to notify clients
+    std::deque<cv::Mat> queue; // queue is our implementaion of the image queue
 };
 
 #endif

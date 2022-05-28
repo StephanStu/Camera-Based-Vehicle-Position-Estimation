@@ -1,21 +1,30 @@
 #include <iostream>
 #include <future>
 #include <mutex>
+#include "ImageServer.h"
 
-#include "MessageQueue.h"
+/*ImageServer::ImageServer(Debuglevel imageServerDebugLevel){
+  debugLevel = imageServerDebugLevel;
+  printToConsole("ImageServer::ImageServer called.");
+}*/
 
-template <typename T> 
-void MessageQueue<T>::addItemToQueue(T &&item){
-  std::lock_guard<std::mutex> uLock(mutex);
-  queue.push_back(std::move(item));
+void ImageServer::addImageToQueue(cv::Mat &&image){
+  std::lock_guard<std::mutex> lock(queueProtection);
+  queue.push_back(std::move(image));
   condition.notify_one(); 
+  printToConsole("ImageServer::addImageToQueue called; ingesting an image.");
 }
 
-template <typename T>
-T MessageQueue<T>::getItemFromQueue(){
-  std::unique_lock<std::mutex> uLock(mutex);
-  condition.wait(uLock, [this] {return !queue.empty();}); 
-  T item = std::move(queue.back());
+cv::Mat ImageServer::getImageFromQueue(){
+  std::unique_lock<std::mutex> lock(queueProtection);
+  condition.wait(lock, [this] {return !queue.empty();}); 
+  cv::Mat image = std::move(queue.back());
   queue.pop_back();
-  return item;
+  lock.unlock();
+  printToConsole("ImageServer::getImageFromQueue called; returning an image to requester.");
+  return image;
 }
+/*
+void ImageServer::run(){
+  printToConsole("ImageServer::run called.");
+}*/

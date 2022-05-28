@@ -12,7 +12,6 @@ PositionServer::PositionServer(Debuglevel positionServerDebuglevel){
 
 void PositionServer::run(){
   printToConsole("PositionServer::run called.");
-  // launch drive function in a thread
   threads.emplace_back(std::thread(&PositionServer::estimatePosition, this));
 } 
 

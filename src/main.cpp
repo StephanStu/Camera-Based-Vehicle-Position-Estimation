@@ -7,20 +7,16 @@
 #include <string> 
 #include <opencv2/core/types.hpp>
 #include <thread>
-#include <queue>
 #include <future>
 #include <mutex>
 #include <algorithm>  // std::for_each
 #include <memory>
 
-#include "CameraDriver.h"
-#include "MovableImageData.h"
-#include "ImageServer.h"
-#include "Types.h"
-#include "MessageQueue.h"
 
-#include "RunnableEntity.h"
+#include "Types.h"
 #include "PositionServer.h"
+#include "CameraDriver.h"
+#include "ImageTransformer.h"
 
 using std::vector;
 using std::cout;
@@ -29,7 +25,7 @@ using std::endl;
 using std::string;
 
 #define PI 3.1415926
- 
+
 int runHoughTransformationTest(cv::Mat image){
   cv::Mat grayImage; // used for the result of transfroming the RGB-Image to a grayscale-image
   cv::Mat edgesDetected; // used for the result of the Canny-Edge-Detection
@@ -102,483 +98,49 @@ int runVideoTest(cv::VideoCapture cap){
   return 0;
 }
 
-int calibrateCamera(cv::Mat image){
-  // Taken from https://github.com/oreillymedia/Learning-OpenCV-3_examples/blob/master/example_19-01.cpp
-  int n_boards = 1;           
-  float image_sf = 0.5f;      // image scaling factor
-  int board_w = 9;
-  int board_h = 6; 
-  int board_n = board_w * board_h;
-  cv::Size board_sz = cv::Size(board_w, board_h);
-  cv::Size image_size = image.size();
-  vector<vector<cv::Point2f>> image_points;
-  vector<vector<cv::Point3f>> object_points;
-  vector<cv::Point2f> corners;
-  bool found = cv::findChessboardCorners(image, board_sz, corners);
-  cout << "Searchign the chessboard corners:" << endl;
-  cout << found << endl;
-  drawChessboardCorners(image, board_sz, corners, found);
-  /*cv::imshow("Calibration", image);
-  cv::waitKey(0);
-  cv::destroyWindow("Calibration");*/
-  image_points.push_back(corners);
-  object_points.push_back(vector<cv::Point3f>());
-  vector<cv::Point3f> &opts = object_points.back();
-  opts.resize(board_n);
-  for (int j = 0; j < board_n; j++) {
-    opts[j] = cv::Point3f(static_cast<float>(j / board_w), static_cast<float>(j % board_w), 0.0f);
-  }
-  cv::Mat intrinsic_matrix, distortion_coeffs;
-  double err = cv::calibrateCamera(object_points, image_points, image_size, intrinsic_matrix, distortion_coeffs, cv::noArray(), cv::noArray(), cv::CALIB_ZERO_TANGENT_DIST | cv::CALIB_FIX_PRINCIPAL_POINT);
-  cout << " *** DONE!\n\nReprojection error is " << err << "\n Saving results in CalibrationData.xml...\n";
-  cv::FileStorage fs("calibrationData.xml", cv::FileStorage::WRITE);
-  fs << "image_width" << image_size.width << "image_height" << image_size.height << "camera_matrix" << intrinsic_matrix << "distortion_coefficients" << distortion_coeffs;
-  fs.release();
-  // EXAMPLE OF LOADING THESE MATRICES BACK IN:
-  fs.open("calibrationData.xml", cv::FileStorage::READ);
-  cout << "\nimage width: " << static_cast<int>(fs["image_width"]);
-  cout << "\nimage height: " << static_cast<int>(fs["image_height"]);
-  cv::Mat intrinsic_matrix_loaded, distortion_coeffs_loaded;
-  fs["camera_matrix"] >> intrinsic_matrix_loaded;
-  fs["distortion_coefficients"] >> distortion_coeffs_loaded;
-  cout << "\nintrinsic matrix:" << intrinsic_matrix_loaded;
-  cout << "\ndistortion coefficients: " << distortion_coeffs_loaded << endl;
-  cv::Mat map1, map2;
-  cv::initUndistortRectifyMap(intrinsic_matrix_loaded, distortion_coeffs_loaded, cv::Mat(), intrinsic_matrix_loaded, image_size, CV_16SC2, map1, map2);
- // Just run the camera to the screen, now showing the raw and
- // the undistorted image.
- //
- cv::Mat undistortedImage;
- image = cv::imread("SimpleRunwayTestImage.png" ,cv::IMREAD_COLOR);
- cv::remap(image, undistortedImage, map1, map2, cv::INTER_LINEAR, cv::BORDER_CONSTANT, cv::Scalar());
- //cv::imshow("Undistorted", undistortedImage);
- //cv::waitKey(0);
-  
-  
-  // Bird Eye view starts here:
-  
- cv::Point2f objPts[4], imgPts[4];
- objPts[0].x = 0; objPts[0].y = 0;
- objPts[1].x = board_w-1; objPts[1].y = 0;
- objPts[2].x = 0; objPts[2].y = board_h-1;
- objPts[3].x = board_w-1; objPts[3].y = board_h-1;
- imgPts[0] = corners[0];
- imgPts[1] = corners[board_w-1];
- imgPts[2] = corners[(board_h-1)*board_w];
- imgPts[3] = corners[(board_h-1)*board_w + board_w-1];
- cv::circle( image, imgPts[0], 9, cv::Scalar( 255, 0, 0), 3);
- cv::circle( image, imgPts[1], 9, cv::Scalar( 0, 255, 0), 3);
- cv::circle( image, imgPts[2], 9, cv::Scalar( 0, 0, 255), 3);
- cv::circle( image, imgPts[3], 9, cv::Scalar( 0, 255, 255), 3);
- //cv::drawChessboardCorners( image, board_sz, corners, found );
-  cv::Mat H = cv::getPerspectiveTransform( objPts, imgPts );
- //cv::imshow( "Checkers", image );
- //  cv::waitKey(0);
-  //cv::destroyWindow("Calibration");
-  
- double Z = 25;
- cv::Mat birds_image;
- for(;;) { // escape key stops
-   H.at<double>(2, 2) = Z;
-   cv::warpPerspective( 
-     image, // Source image
-     birds_image, // Output image
-     H, // Transformation matrix
-     image.size(), // Size for output image
-     cv::WARP_INVERSE_MAP | cv::INTER_LINEAR,
-     cv::BORDER_CONSTANT,
-     cv::Scalar::all(0) // Fill border with black
-   );
-   cv::imshow("Birds_Eye", birds_image);
-   int key = cv::waitKey() & 255;
-   if(key == 'u') Z += 0.5;
-   if(key == 'd') Z -= 0.5;
-   if(key == 27) break;
- }
- return 0;
-}
-
-int calibrate(){
-  /*cv::Mat image;
-  string path("calibration/");
-  string file("calibration");
-  string fileType(".jpg");  
-  int number=12;
-  string fileNumber = std::to_string(number);
-  string imageFile = path + file + fileNumber + fileType;
-  cout << imageFile << endl;
-  //image = cv::imread("calibration/calibration01.jpg" ,cv::IMREAD_COLOR);
-  image = cv::imread(imageFile ,cv::IMREAD_COLOR);
-  cout << image.size() << endl;
-  cv::imshow("Birds_Eye", image);
-  cv::waitKey(0);
-  */
-  Debuglevel debuglevel = Debuglevel::verbose;
-  CameraDriver cameraDriver(debuglevel);
-  cameraDriver.calibrate();
-  cv::Mat TestMat1, TestMat2;
-  cameraDriver.getIntrinsicMatrix(TestMat1);
-  cameraDriver.getDistortionCoefficients(TestMat2); 
-  MovableImageData movableImage01(cv::imread("SimpleRunwayTestImage.png" ,cv::IMREAD_COLOR), debuglevel);
-  MovableImageData movableImage02(cv::imread("SimpleRunwayTestImage.png" ,cv::IMREAD_COLOR), debuglevel);
-  MovableImageData movableImage03(cv::imread("SimpleRunwayTestImage.png" ,cv::IMREAD_COLOR), debuglevel);
-  
-  unsigned long int myLongInt;
-  
-  movableImage02.getCounter(myLongInt);
-  movableImage02.getIdentifier(myLongInt);
-  
-  cv::Mat imageFromCamera;
-  cameraDriver.getRawImage(imageFromCamera);
-  MovableImageData fromCamera(imageFromCamera, debuglevel);
-  fromCamera.getCounter(myLongInt);
-  fromCamera.getIdentifier(myLongInt);
-  
-  
-  return 0;
-}
-
-int drawpoly(){  
-    cv::Mat img(500, 500, CV_8U, cv::Scalar(0));  
-  
-    cv::Point root_points[1][4];  
-    root_points[0][0] = cv::Point(215,220);  
-    root_points[0][1] = cv::Point(460,225);  
-    root_points[0][2] = cv::Point(466,450);  
-    root_points[0][3] = cv::Point(235,465);  
-  
-    const cv::Point* ppt[1] = {root_points[0]};  
-    int npt[] = {4};  
-    //cv::Scalar scale(255);
-    //cv::polylines(img, ppt, npt, 1, 1, scale, 1, 8, 0);  
-    polylines(img, ppt, npt, 1, 1, cv::Scalar(255),1,8,0);  
-    cv::imshow("Test", img);  
-    cv::waitKey();  
-    cv::fillPoly(img, ppt, npt, 1, cv::Scalar(255));  
-    cv::imshow("Test", img);  
-    cv::waitKey(); 
-    return 0;
-}  
-
-int transform2BirdsEyeView(){
-  /* Luiteture cited https://www.researchgate.net/publication/224195999_Distance_determination_for_an_automobile_environment_using_Inverse_Perspective_Mapping_in_OpenCV/link/00b4951c994745bf6b000000/download
-  https://gist.github.com/anujonthemove/7b35b7c1e05f01dd11d74d94784c1e58
-  */
-  
-  
-  // mat container to receive images
-  cv::Mat source, destination;
-  source = cv::imread("SimpleRunwayTestImage.png" ,cv::IMREAD_COLOR); 
-  int alpha_ = 90, beta_ = 90, gamma_ = 90;
-  int f_ = 10, dist_ = 10;
-  int frameWidth = 640; 
-  int frameHeight = 480;
-  cv::namedWindow("Result", 1);
-  cv::resize(source, source, cv::Size(frameWidth, frameHeight));
-  double focalLength, dist, alpha, beta, gamma; 
-  alpha =((double)alpha_ -90) * PI/180;
-  beta =((double)beta_ -90) * PI/180;
-  gamma =((double)gamma_ -90) * PI/180;
-  focalLength = (double)f_;
-  dist = (double)dist_;
-  cv::Size image_size = source.size();
-  double w = (
-              double)image_size.width, h = (double)image_size.height;
-  // Projecion matrix 2D -> 3D
-  cv::Mat A1 = (cv::Mat_<float>(4, 3)<< 
-			1, 0, -w/2,
-			0, 1, -h/2,
-			0, 0, 0,
-			0, 0, 1 );
-
-	
-	// Rotation matrices Rx, Ry, Rz
-	cv::Mat RX = (cv::Mat_<float>(4, 4) << 
-			1, 0, 0, 0,
-			0, cos(alpha), -sin(alpha), 0,
-			0, sin(alpha), cos(alpha), 0,
-			0, 0, 0, 1 );
-	cv::Mat RY = (cv::Mat_<float>(4, 4) << 
-			cos(beta), 0, -sin(beta), 0,
-			0, 1, 0, 0,
-			sin(beta), 0, cos(beta), 0,
-			0, 0, 0, 1	);
-	cv::Mat RZ = (cv::Mat_<float>(4, 4) << 
-			cos(gamma), -sin(gamma), 0, 0,
-			sin(gamma), cos(gamma), 0, 0,
-			0, 0, 1, 0,
-			0, 0, 0, 1	);
-	// R - rotation matrix
-	cv::Mat R = RX * RY * RZ;
-	// T - translation matrix
-	cv::Mat T = (cv::Mat_<float>(4, 4) << 
-			1, 0, 0, 0,  
-			0, 1, 0, 0,  
-			0, 0, 1, dist,  
-			0, 0, 0, 1); 
-	// K - intrinsic matrix 
-    cv::Mat K = (cv::Mat_<float>(3, 4) << 
-			focalLength, 0, w/2, 0,
-			0, focalLength, h/2, 0,
-			0, 0, 1, 0
-			); 
-	cv::Mat transformationMat = K * (T * (R * A1));
-
-	cv::warpPerspective(source, destination, transformationMat, image_size, cv::INTER_CUBIC | cv::WARP_INVERSE_MAP);
-
-	cv::imshow("Result", destination);
-	cv::waitKey(0);
-    return 0;
-}
-
-int calibratePerspectiveTransformation(){
-  cv::Mat image = cv::imread("test/test01.jpg" ,cv::IMREAD_COLOR);
-  cv::Size size(500,600);
-  //size = image.size();
-  std::cout << size <<std::endl;
-  cv::Point2f objPts[4], imgPts[4];
-  // Calibrweted with 800 x 582 image
-  objPts[0].x = 375; objPts[0].y = 480; 
-  objPts[1].x = 905; objPts[1].y = 480;
-  objPts[2].x = 1811; objPts[2].y = 685; 
-  objPts[3].x = -531; objPts[3].y = 685; 
-  
-  // Calibrweted with 800 x 582 image
-  imgPts[0].x = 0; imgPts[0].y = 0; // Top-Right
-  imgPts[1].x = 500; imgPts[1].y = 0; // Bottom-Right
-  imgPts[2].x = 500; imgPts[2].y = 600; // Bottom-Left
-  imgPts[3].x = 0; imgPts[3].y = 600; // Top-Left
-    
-  /*imgPts[0].x = 
-  imgPts[1].y = 
-  imgPts[1].x = 
-  imgPts[1].y = 
-  imgPts[2].x = 
-  imgPts[2].y = 
-  imgPts[3].y = 
-  imgPts[3].y = */
-  // DRAW THE POINTS in order: B,G,R,YELLOW
-  int objPtsRadius = 12;
-  int imgPtsRadius = 9;
-  cv::circle(image, objPts[0], objPtsRadius, cv::Scalar(255, 0, 0), 3);
-  cv::circle(image, objPts[1], objPtsRadius, cv::Scalar(255, 0, 0), 3);
-  cv::circle(image, objPts[2], objPtsRadius, cv::Scalar(255, 0, 0), 3);
-  cv::circle(image, objPts[3], objPtsRadius, cv::Scalar(255, 0, 0), 3);
-  cv::circle(image, imgPts[0], imgPtsRadius, cv::Scalar(255, 255, 255), 3);
-  cv::circle(image, imgPts[1], imgPtsRadius, cv::Scalar(255, 255, 255), 3);
-  cv::circle(image, imgPts[2], imgPtsRadius, cv::Scalar(255, 255, 255), 3);
-  cv::circle(image, imgPts[3], imgPtsRadius, cv::Scalar(255, 255, 255), 3);
-  
-  /*
-  
-      if not src:
-            src = np.float32([[696, 455],
-                             [1096, 719],
-                             [206, 719],
-                             [587, 455]])
-        if not dst:
-            dst = np.float32([[930, 0],
-                             [930, 719],
-                             [350, 719],
-                             [350, 0]])
-
-        #get transformation matrix
-        M = cv2.getPerspectiveTransform(src, dst)
-        #get inverse transformation matrix
-        Minv = cv2.getPerspectiveTransform(dst, src)
-  
-  */
-  
-  
-  cv::Mat H = cv::getPerspectiveTransform(objPts, imgPts);
-  cv::Mat HInv = cv::getPerspectiveTransform(imgPts, objPts);
-  std::cout << H << std::endl;
-  
-  
-  cv::imshow("Test-Image", image);
-  cv::waitKey(0);
-  
-  cout << "\nPress 'd' for lower birdseye view, and 'u' for higher (it adjusts the apparent 'Z' height), Esc to exit" << endl;
-  double Z = 1;
-  cv::Mat birds_image;
-  //cv::Size birds_image_size(280, 230);
-  for (;;) {
-    // escape key stops
-    H.at<double>(2, 2) = Z;
-    // USE HOMOGRAPHY TO REMAP THE VIEW
-    //
-    cv::warpPerspective(image,			// Source image
-                        birds_image, 	// Output image
-                        H,              // Transformation matrix
-                        size,   // Size for output image. Before: image.size()
-                        cv::INTER_LINEAR, // cv::WARP_INVERSE_MAP | cv::INTER_LINEAR,
-                        cv::BORDER_CONSTANT, cv::Scalar::all(0) // Fill border with black
-                        );
-    cv::imshow("Birds_Eye", birds_image);
-    int key = cv::waitKey() & 255;
-    if (key == 'u')
-      Z += 0.5;
-      std::cout << Z << std::endl;
-    if (key == 'd')
-      Z -= 0.5;
-      std::cout << Z << std::endl;
-    if (key == 27)
-      break;
-  }
-  
-  return 0;
-}
-
-int testMovableImageData(){
-  cv::Mat image = cv::imread("test/test01.jpg" ,cv::IMREAD_COLOR);
-  cv::Mat result;
-  cv::Size size;
-  size = image.size();
-  Debuglevel debuglevel = Debuglevel::verbose;
-  MovableImageData movableImage(image, debuglevel);
-  movableImage.getRawImageSize(size); // TESTED::OK
-  movableImage.getRawImage(result); // TESTED::OK
-  imshow("Original", image);
-  imshow("Processed", result);
-  cv::waitKey(0);  
-  return 0;
-}
-
-int testImageServer(){
-  Debuglevel debuglevel = Debuglevel::verbose;
-  ImageServer imageServer(debuglevel);
-  //cv::Mat image = cv::imread("test/test01.jpg" ,cv::IMREAD_COLOR); // size is 1280 x 720
-  cv::Mat image = cv::imread("SimpleRunwayTestImage.png" ,cv::IMREAD_COLOR); // size is 800 x 582, sample image to test the transformation.
-  cv::resize(image, image, cv::Size(1280, 720));
-  std::cout << image.size() << std::endl;
-  cv::Mat result;
-  CameraDriver camera(debuglevel);
-  camera.calibrate();
-  imageServer.applyGausianBlurr(result, result); // TESTED::OK
-  imageServer.convert2GrayImage(result, result); // TESTED::OK
-  imageServer.convert2BirdsEyeView(result, result); // TESTED::OK
-  imageServer.convert2BinaryImage(result, result); // TESTED::OK
-  imshow("Original", image);
-  imshow("Processed", result);
-  cv::waitKey(0);
-  return 0;
-}
-
-int testImageServerWithVideo(){
-  Debuglevel debuglevel = Debuglevel::verbose;
-  ImageServer imageServer(debuglevel);
-  CameraDriver camera(debuglevel);
-  camera.calibrate();
-  cv::VideoCapture cap("testVideo002.mp4");
-  cv::Mat frame;
-  cv::Mat result;
-  // Check if camera opened successfully
-  if(!cap.isOpened()){
-    std::cout << "Error opening video stream or file" << std::endl;
-    return -1;
-  }
-  while(1){
-    // Capture frame-by-frame
-    cap >> frame;
-    // If the frame is empty, break immediately
-    if (frame.empty()){
-      break;
-    }
-    // Display the resulting frame
-    //imshow( "Frame", frame );
-    cv::resize(frame, frame, cv::Size(1280, 720));
-    
-    //imageServer.convert2BirdsEyeView(frame, result); 
-    imageServer.applyGausianBlurr(result, result); // TESTED::OK
-    imageServer.convert2GrayImage(result, result); // TESTED::OK
-    imageServer.convert2BirdsEyeView(result, result); // TESTED::OK
-    imageServer.convert2BinaryImage(result, result); // TESTED::OK
-    
-    imshow("Original frame", frame);
-    imshow("Processed frame", result);
-    // Press  ESC on keyboard to exit
-    char c=(char)cv::waitKey(25);
-    if(c==27){
-      break;
-    }
-  }
-  // When everything done, release the video capture object
-  cap.release();
-  // Closes all the frames
-  cv::destroyAllWindows();
-  return 0;
-}
-
-int testImageQueue(){
-  Debuglevel debuglevel = Debuglevel::verbose;
-  // create monitor object as a shared pointer to enable access by multiple threads
-  std::shared_ptr<ImageServer> point2ImageServer(new ImageServer(debuglevel));
-  std::cout << "# INITIALIZE" << std::endl;
-  std::cout << "# RUNNING" << std::endl;
-  /*std::vector<std::future<void>> futures;
-  for (int i = 0; i < 10; ++i){
-    cv::Mat image; // used to hold an RGB-image
-    image = cv::imread("SimpleRunwayTestImage.png" ,cv::IMREAD_COLOR); 
-    futures.emplace_back(std::async(std::launch::async, &ImageServer::addImageToQueue, point2ImageServer, std::move(image)));
-  }*/
-  cv::Mat image = cv::imread("test/test01.jpg" ,cv::IMREAD_COLOR);
-  imshow("Original", image);
-  //cv::Mat image = cv::imread("SimpleRunwayTestImage.png" ,cv::IMREAD_COLOR); 
-  std::async(std::launch::async, &ImageServer::addImageToQueue, point2ImageServer, std::move(image));
-  cv::Mat result = point2ImageServer->getImageFromQueue();
-  imshow("Processed", result);
-  cv::waitKey(0);
-  return 0;
-}
-
-int testIsCvMatMoveable(cv::Mat &&image){
-  std::cout << "Here is the image that has been moved." << std::endl;
-  imshow("Original", image);
-  cv::waitKey(0);
-  return 0;
-}
-
-int testUniqueAccess2Camera(){
-  Debuglevel debuglevel = Debuglevel::verbose;
-  std::unique_ptr<CameraDriver> cameraAccess(new CameraDriver(debuglevel));
-  cameraAccess->calibrate();
-  
-  std::shared_ptr<ImageServer> imageServerAccess(new ImageServer(debuglevel));
-  
-  cv::Mat image;
-  
-  cameraAccess->getUndistortedImage(image);
-  
-  
-  
-  return testIsCvMatMoveable(std::move(image));
-}
 
 int testRunnableEntity(){
-  Debuglevel debuglevel = Debuglevel::verbose;
-  PositionServer positionServer(debuglevel);
-  positionServer.run();
+  std::vector<std::future<void>> futures;
+  /*std::shared_ptr<ImageServer> imgSrv(new ImageServer(debuglevel));
+ 
+  std::cout << "Spawning threads..." << std::endl;
+  std::vector<std::future<void>> futures;
+  for (int i = 0; i < 10; ++i){
+    cv::Mat image = cv::imread("SimpleRunwayTestImage.png" ,cv::IMREAD_COLOR); 
+    futures.emplace_back(std::async(std::launch::async, &ImageServer::addImageToQueue, imgSrv, std::move(image)));
+  }
+  
+  cv::Mat res = imgSrv->getImageFromQueue();
+  std::cout << res.size() << std::endl;
+ */
+  CameraDriver cameraDriver(Debuglevel::verbose);
+  PositionServer positionServer(Debuglevel::verbose);
+  ImageTransformer imageTransformer(Debuglevel::verbose);
+  //cameraDriver.run();  
+  //positionServer.run();
+  //auto camerafutr = std::async(std::launch::async, &CameraDriver::run, &cameraDriver);
+  //auto posfutr = std::async(std::launch::async, &PositionServer::run, &positionServer);
+  //posfutr.get();
+  //camerafutr.get();
+  futures.emplace_back(std::async(std::launch::async, &CameraDriver::run, &cameraDriver));
+  futures.emplace_back(std::async(std::launch::async, &PositionServer::run, &positionServer));
+  futures.emplace_back(std::async(std::launch::async, &ImageTransformer::run, &imageTransformer));
+  std::for_each(futures.begin(), futures.end(), [](std::future<void> &ftr) {
+        ftr.wait();
+  });
+  
+  
+ 
+  
+  
   return 0;
 }
 
 int main(){
   int flag;
-  cv::Mat image; // used to hold an RGB-image
-  image = cv::imread("SimpleRunwayTestImage.png" ,cv::IMREAD_COLOR); // sample image to test the transformation.
+  cv::Mat image = cv::imread("SimpleRunwayTestImage.png" ,cv::IMREAD_COLOR); // sample image to test the transformation.
   cv::VideoCapture cap("testVideo002.mp4"); // sample video to test the video-processing
-  //flag = runHoughTransformationTest(image);  cv::waitKey(0);
-  //flag = runVideoTest(cap);
-  //flag = calibrateCamera(cv::imread("checkerboard9x6.png" ,cv::IMREAD_COLOR));
-  // flag = calibrate();
-  //flag = drawpoly();
-  //flag = transform2BirdsEyeView();
-  //flag = calibratePerspectiveTransformation();
-  //flag = testMovableImageData();
-  //flag = testImageServer();
-  //flag = testImageServerWithVideo();
-  //flag = testImageQueue();
-  //flag = testIsCvMatMoveable(std::move(image)); // OK, that works
-  //flag = testUniqueAccess2Camera();
   flag = testRunnableEntity();
   return 0;
 }
+
