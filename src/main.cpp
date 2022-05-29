@@ -128,14 +128,33 @@ int testRunnableEntity(){
   std::for_each(futures.begin(), futures.end(), [](std::future<void> &ftr) {
         ftr.wait();
   });
-  
-  
- 
-  
-  
+  std::promise<cv::Mat> prms;
+  std::future<cv::Mat> ftr = prms.get_future();
+  std::this_thread::sleep_for(std::chrono::milliseconds(5000));
+  std::thread t(&CameraDriver::sendImageFromQueue, &cameraDriver, std::move(prms));
+  /*auto f = [cameraDriver](prms){ // using a lambda function here auto f = [VARIABLES FROM CALLING SCOPE GO HERE]( PARAMETERS GO HERE ){ FUNCTION GOES HERE }
+    cameraDriver.sendImageFromQueue(std::move(prms)); 
+  };*/
+  t.join();
+  cv::Mat image = ftr.get();
+  cv::imshow( "OpenCV Test Program", image );
+  cv::waitKey(0);
   return 0;
 }
 
+/*class bar {
+public:
+  void foo() {
+    std::cout << "hello from member function" << std::endl;
+  }
+};
+
+int main()
+{
+  std::thread t(&bar::foo, bar());
+  t.join();
+}
+*/
 int main(){
   int flag;
   cv::Mat image = cv::imread("SimpleRunwayTestImage.png" ,cv::IMREAD_COLOR); // sample image to test the transformation.
