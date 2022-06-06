@@ -57,6 +57,21 @@ void ImageTransformer::setBirdEyesTransformMatrix(){
   birdsEyeTransformMatrix = H;
 }
 
+void ImageTransformer::mountCamerDriver(std::shared_ptr<CameraDriver> pointerToCameraDriver){
+  printToConsole("ImageTransformer::mountCameraDriver called, instance of CamerDriver is mounted via saving the shared pointer.");
+  accessCameraDriver = pointerToCameraDriver;
+}
+
+cv::Mat ImageTransformer::getImageFromMountedCameraDriver(){
+  printToConsole("ImageTransformer::getImageFromMountedCameraDriver called, pulling an image with promise-future-mechanism.");
+  std::promise<cv::Mat> prms;
+  std::future<cv::Mat> ftr = prms.get_future();
+  std::thread t(&CameraDriver::receiveImageFromQueue, accessCameraDriver, std::move(prms));
+  t.join();
+  cv::Mat image = ftr.get();
+  return image;
+}
+
 void ImageTransformer::transformAndStoreImage(){
   while(true){
     std::this_thread::sleep_for(std::chrono::milliseconds(1000));

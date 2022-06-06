@@ -101,28 +101,13 @@ int runVideoTest(cv::VideoCapture cap){
 
 int testRunnableEntity(){
   std::vector<std::future<void>> futures;
-  /*std::shared_ptr<ImageServer> imgSrv(new ImageServer(debuglevel));
- 
-  std::cout << "Spawning threads..." << std::endl;
-  std::vector<std::future<void>> futures;
-  for (int i = 0; i < 10; ++i){
-    cv::Mat image = cv::imread("SimpleRunwayTestImage.png" ,cv::IMREAD_COLOR); 
-    futures.emplace_back(std::async(std::launch::async, &ImageServer::addImageToQueue, imgSrv, std::move(image)));
-  }
-  
-  cv::Mat res = imgSrv->getImageFromQueue();
-  std::cout << res.size() << std::endl;
- */
-  CameraDriver cameraDriver(Debuglevel::verbose);
+  std::shared_ptr<CameraDriver> accessCameraDriver(new CameraDriver(Debuglevel::verbose));
   PositionServer positionServer(Debuglevel::verbose);
   ImageTransformer imageTransformer(Debuglevel::verbose);
-  //cameraDriver.run();  
-  //positionServer.run();
-  //auto camerafutr = std::async(std::launch::async, &CameraDriver::run, &cameraDriver);
-  //auto posfutr = std::async(std::launch::async, &PositionServer::run, &positionServer);
-  //posfutr.get();
-  //camerafutr.get();
-  futures.emplace_back(std::async(std::launch::async, &CameraDriver::run, &cameraDriver));
+  std::thread m(&ImageTransformer::mountCamerDriver, &imageTransformer, accessCameraDriver);
+  m.join();
+ 
+  futures.emplace_back(std::async(std::launch::async, &CameraDriver::run, accessCameraDriver));
   futures.emplace_back(std::async(std::launch::async, &PositionServer::run, &positionServer));
   futures.emplace_back(std::async(std::launch::async, &ImageTransformer::run, &imageTransformer));
   std::for_each(futures.begin(), futures.end(), [](std::future<void> &ftr) {
@@ -131,7 +116,7 @@ int testRunnableEntity(){
   std::promise<cv::Mat> prms;
   std::future<cv::Mat> ftr = prms.get_future();
   std::this_thread::sleep_for(std::chrono::milliseconds(5000));
-  std::thread t(&CameraDriver::sendImageFromQueue, &cameraDriver, std::move(prms));
+  std::thread t(&CameraDriver::receiveImageFromQueue, accessCameraDriver, std::move(prms));
   /*auto f = [cameraDriver](prms){ // using a lambda function here auto f = [VARIABLES FROM CALLING SCOPE GO HERE]( PARAMETERS GO HERE ){ FUNCTION GOES HERE }
     cameraDriver.sendImageFromQueue(std::move(prms)); 
   };*/
@@ -155,11 +140,34 @@ int main()
   t.join();
 }
 */
+int testLaunchSequenceOfImageTransformer(){
+  
+  //std::shared_ptr<CameraDriver> accessCameraDriver(new CameraDriver(Debuglevel::verbose)); // create an instance + shared pointer to a CamerDriver
+  std::shared_ptr<CameraDriver> accessCameraDriver(new CameraDriver(Debuglevel::verbose)); // create an instance + shared pointer to a CamerDriver
+  std::shared_ptr<ImageTransformer> accessImageTransformer(new ImageTransformer(Debuglevel::verbose)); // create an instace + shared pointer to an ImageTransformer.
+  accessImageTransformer->mountCamerDriver(accessCameraDriver);
+  std::async(std::launch::async, &CameraDriver::run, accessCameraDriver);
+  while(true){
+    std::cout << accessCameraDriver->getQueueLength() << std::endl;
+    /*if(accessCameraDriver->getQueueLength() > 0){
+      cv::Mat image = accessImageTransformer->getImageFromMountedCameraDriver();
+      std::cout << accessImageTransformer->getCurrentState() << std::endl;
+      std::cout << image.size() << std::endl;
+    }*/
+    cv::Mat image = accessImageTransformer->getImageFromMountedCameraDriver();
+    std::cout << accessImageTransformer->getCurrentState() << std::endl;
+    std::cout << image.size() << std::endl;
+    std::this_thread::sleep_for(std::chrono::milliseconds(500));
+  }
+  return 0;
+}
+
 int main(){
   int flag;
   cv::Mat image = cv::imread("SimpleRunwayTestImage.png" ,cv::IMREAD_COLOR); // sample image to test the transformation.
   cv::VideoCapture cap("testVideo002.mp4"); // sample video to test the video-processing
-  flag = testRunnableEntity();
+  //flag = testRunnableEntity();
+  flag = testLaunchSequenceOfImageTransformer();
   return 0;
 }
 

@@ -2,6 +2,7 @@
 #define IMAGETRANSFORMER_H
 
 #include <opencv2/opencv.hpp>
+#include "CameraDriver.h"
 #include "ImageServer.h"
 #include "Types.h"
 
@@ -16,6 +17,8 @@ class ImageTransformer : public ImageServer {
     ImageTransformer();
     // other
     void run(); // runs the service: Consume undistorted images from the camera driver, blur, warp,... and move the bird eye's view into the image queue.
+    void mountCamerDriver(std::shared_ptr<CameraDriver> pointerToCameraDriver); // "Mounts" the instance of CameraDriver to the instance of ImageTransformer by saving the shared pointer in the member variables
+    cv::Mat getImageFromMountedCameraDriver(); // Given the Camera Driver is mounted, this methof pulls an image.
   private:
     void convertToBinaryImage(cv::Mat& source, cv::Mat& destination); // convert the gray(!) source image to a binary image (= total black everything below a threshold and totla white anything above threshold)
     void convertToBirdEyesView(cv::Mat& source, cv::Mat& destination); // compute the bird eye's view of the source image
@@ -39,6 +42,7 @@ class ImageTransformer : public ImageServer {
     const int maxBinaryValue = 255; // value of the visible pixels in the binary image == "white"
     const int binaryThresholdValue = 90; // value of the grayscale(!) pixels that are converted to maxBinaryValue in the bird eye's image; anything below that value is converted to zero = "black". 
     cv::Mat birdsEyeTransformMatrix; // Matrix for bird's eye perspective transform  
+    std::shared_ptr<CameraDriver> accessCameraDriver; // shared pointer to an instance of CameraDriver delivering images upond request
 };
 
 #endif

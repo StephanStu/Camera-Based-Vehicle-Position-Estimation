@@ -16,11 +16,12 @@ void CameraDriver::calibrate(){
 
 void CameraDriver::undistortImage(cv::Mat& source, cv::Mat& destination){
   printToConsole("CameraDriver::undistortImage called.");
+  cv::undistort(source, destination, intrinsicMatrix, distortionCoefficients);
 }
 
 void CameraDriver::sourceRawImages(){
   while(true){
-    std::this_thread::sleep_for(std::chrono::milliseconds(1000));
+    std::this_thread::sleep_for(std::chrono::milliseconds(500));
     printToConsole("CameraDriver::sourceRawImages is still running.");
     cv::Mat image = cv::imread("test/test01.jpg" ,cv::IMREAD_COLOR);
     addImageToQueue(std::move(image));
