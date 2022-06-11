@@ -17,6 +17,7 @@
 #include "PositionServer.h"
 #include "CameraDriver.h"
 #include "ImageTransformer.h"
+#include "PositionService.h"
 
 using std::vector;
 using std::cout;
@@ -162,12 +163,23 @@ int testLaunchSequenceOfImageTransformer(){
   return 0;
 }
 
+int testPositionService(){
+  PositionService positionService(Debuglevel::verbose);
+  positionService.initialize();
+  std::this_thread::sleep_for(std::chrono::milliseconds(500));
+  positionService.run();
+  std::this_thread::sleep_for(std::chrono::milliseconds(500));
+  positionService.terminate();
+  return 0;
+}
+
 int main(){
   int flag;
   cv::Mat image = cv::imread("SimpleRunwayTestImage.png" ,cv::IMREAD_COLOR); // sample image to test the transformation.
   cv::VideoCapture cap("testVideo002.mp4"); // sample video to test the video-processing
   //flag = testRunnableEntity();
-  flag = testLaunchSequenceOfImageTransformer();
+  //flag = testLaunchSequenceOfImageTransformer();
+  flag = testPositionService();
   return 0;
 }
 

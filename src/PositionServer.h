@@ -17,6 +17,7 @@ class PositionServer : public RunnableEntity {
     void run(); // overrides virtual function "run" in base class
   private:
     void estimatePosition(); // runs a kalman-filter to estimate the vehicle's distance to center line based on transformed images pulled from :ImageTransformer.
+    friend class PositionService;
 };
 
 #endif

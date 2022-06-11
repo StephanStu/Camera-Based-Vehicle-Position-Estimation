@@ -1,12 +1,13 @@
 #include "ImageTransformer.h"
 
-ImageTransformer::ImageTransformer(Debuglevel imageTransformerDebugLevel){
-  debugLevel = imageTransformerDebugLevel;
+ImageTransformer::ImageTransformer(){
+  debugLevel = Debuglevel::none;
   printToConsole("ImageTransformer::ImageTransformer called.");
   setBirdEyesTransformMatrix();
 }
 
-ImageTransformer::ImageTransformer(){
+ImageTransformer::ImageTransformer(Debuglevel imageTransformerDebugLevel){
+  debugLevel = imageTransformerDebugLevel;
   printToConsole("ImageTransformer::ImageTransformer called.");
   setBirdEyesTransformMatrix();
 }
@@ -74,7 +75,22 @@ cv::Mat ImageTransformer::getImageFromMountedCameraDriver(){
 
 void ImageTransformer::transformAndStoreImage(){
   while(true){
-    std::this_thread::sleep_for(std::chrono::milliseconds(1000));
-    printToConsole("ImageTransformer::transformAndStoreImage is still running.");
+    if(currentState == initializing){
+      printToConsole("ImageTransformer::transformAndStoreImage is called, instance is waiting in state initializing.");
+      std::this_thread::sleep_for(std::chrono::milliseconds(sleepForMilliseconds));
+    }
+    if(currentState == running){
+      printToConsole("ImageTransformer::transformAndStoreImage is running and pulling images from camera driver into its own queue.");
+      // ADD PULL FROM CAMERA DRIVER HERE AND TRANSFORMING
+      std::this_thread::sleep_for(std::chrono::milliseconds(sleepForMilliseconds));
+    }
+    if(currentState == terminated){
+      printToConsole("ImageTransformer::transformAndStoreImage is called, instance has reached state terminated. Quitting.");
+      break;
+    }
+    if(currentState == freezed){
+      printToConsole("ImageTransformer::transformAndStoreImage is called, instance is waiting in state freezed.");
+      std::this_thread::sleep_for(std::chrono::milliseconds(sleepForMilliseconds));
+    }
   }
 }

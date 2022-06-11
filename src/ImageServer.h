@@ -27,6 +27,8 @@ class ImageServer : public RunnableEntity {
 	std::mutex queueProtection; // this mutex is shared by all objects for protecting access to the queues
     std::condition_variable condition; // condition varibale is needed to notify clients
     std::deque<cv::Mat> queue; // queue is our implementaion of the image queue
+  private:
+    friend class PositionService;
 };
 
 #endif

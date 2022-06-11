@@ -4,15 +4,11 @@
 #include "RunnableEntity.h"
 
 std::mutex RunnableEntity::consoleProtection;
-State currentState = State::terminated;
 
-RunnableEntity::RunnableEntity()
-{
-    debugLevel = Debuglevel::none;
+RunnableEntity::RunnableEntity() : sleepForMilliseconds(100), currentState(State::terminated), debugLevel(Debuglevel::none) {
 }
 
-RunnableEntity::~RunnableEntity()
-{
+RunnableEntity::~RunnableEntity(){
   // set up thread barrier before this object is destroyed
   std::for_each(threads.begin(), threads.end(), [](std::thread &t) {
     t.join();
@@ -34,13 +30,18 @@ State RunnableEntity::getCurrentState(){
 
 void RunnableEntity::setCurrentState(State targetState){
   std::string message;
-  switch (targetState){
-    case initializing: message = "RunnableEntity::setCurrentState is called, state is set to initializing.";
-    case running: message = "RunnableEntity::setCurrentState is called, state is set to running.";
-    case freezed: message = "RunnableEntity::setCurrentState is called, state is set to freezed.";
-    case terminated: message = "RunnableEntity::setCurrentState is called, state is set to terminated.";
-    default: message = "RunnableEntity::setCurrentState is called, state is set to terminated.";
-    }
+  if (targetState == initializing){
+    message = "RunnableEntity::setCurrentState is called, state is set to initializing.";
+  }
+  if (targetState == running){
+    message = "RunnableEntity::setCurrentState is called, state is set to running";
+  }
+  if (targetState == terminated){
+    message = "RunnableEntity::setCurrentState is called, state is set to terminated.";
+  }
+  if (targetState == freezed){
+    message = "RunnableEntity::setCurrentState is called, state is set to freezed.";
+  }
   printToConsole(message);
   currentState = targetState;
 } 
@@ -52,3 +53,10 @@ void RunnableEntity::printToConsole(std::string message){
     lock.unlock();
   }
 }
+
+ void RunnableEntity::setSleepForMilliseconds(unsigned int time){
+   std::string message;
+   message = "RunnableEntity::setSleepForMilliseconds is called, setting sleepForMillisecons equal to " + std::to_string(time) + ".";
+   printToConsole(message);
+   sleepForMilliseconds = time;
+ }
