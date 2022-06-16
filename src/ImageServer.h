@@ -23,6 +23,7 @@ class ImageServer : public RunnableEntity {
     unsigned int getQueueLength(); // returns the length of the queue to e.g. observe if the queue is growing and growing due to resource shortage or if it stays close to zero due to consumers constantly pulling images
   protected:
     void addImageToQueue(cv::Mat &&image); // adds an image to the queue using std::move()
+    void clearQueue(); // clears the queue of images (to free memory!)
     cv::Mat getImageFromQueue(); // pops an image from the queue and returns
 	std::mutex queueProtection; // this mutex is shared by all objects for protecting access to the queues
     std::condition_variable condition; // condition varibale is needed to notify clients

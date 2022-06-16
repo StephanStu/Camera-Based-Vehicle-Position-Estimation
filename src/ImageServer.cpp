@@ -60,3 +60,10 @@ unsigned int ImageServer::getQueueLength(){
   printToConsole(message);
   return size;
 }
+
+void ImageServer::clearQueue(){
+  unsigned int size = queue.size();
+  std::string message = "ImageServer::clearQueue called, popping " + std::to_string(size) + " images.";
+  printToConsole(message);
+  while(!queue.empty()) queue.pop_back();
+}

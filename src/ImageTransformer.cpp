@@ -85,7 +85,8 @@ void ImageTransformer::transformAndStoreImage(){
       std::this_thread::sleep_for(std::chrono::milliseconds(sleepForMilliseconds));
     }
     if(currentState == terminated){
-      printToConsole("ImageTransformer::transformAndStoreImage is called, instance has reached state terminated. Quitting.");
+      printToConsole("ImageTransformer::transformAndStoreImage is called, instance has reached state terminated. Cleaning up & quitting.");
+      clearQueue();
       break;
     }
     if(currentState == freezed){

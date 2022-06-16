@@ -36,6 +36,13 @@ void PositionService::initialize(){
   imposeStateOnResources(State::initializing);
   imposeSleepForMillisecondsOnResources(50);
   accessImageTransformer->mountCamerDriver(accessCameraDriver);
+  //accessCameraDriver->calibrate();
+  accessCameraDriver->isReady();
+  //accessCameraDriver->writeCameraCalibrationDataToFile();
+  
+  accessCameraDriver->readCameraCalibrationDataFromFile();
+  accessCameraDriver->isReady();
+  
   //std::async(std::launch::async, &CameraDriver::run, accessCameraDriver); // starting :CameraDriver's thread, per definition this is a call to its "run()".
   //std::async(std::launch::async, &ImageTransformer::run, accessImageTransformer); // starting :ImageTransformer's thread, per definition this is a call to its "run()".
   threads.emplace_back(std::thread(&CameraDriver::run, accessCameraDriver)); // starting :CameraDriver's thread, per definition this is a call to its "run()".

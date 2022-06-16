@@ -166,9 +166,9 @@ int testLaunchSequenceOfImageTransformer(){
 int testPositionService(){
   PositionService positionService(Debuglevel::verbose);
   positionService.initialize();
-  std::this_thread::sleep_for(std::chrono::milliseconds(500));
+  std::this_thread::sleep_for(std::chrono::milliseconds(250));
   positionService.run();
-  std::this_thread::sleep_for(std::chrono::milliseconds(500));
+  std::this_thread::sleep_for(std::chrono::milliseconds(250));
   positionService.terminate();
   return 0;
 }

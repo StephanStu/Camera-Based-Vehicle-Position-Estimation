@@ -5,7 +5,7 @@
 
 std::mutex RunnableEntity::consoleProtection;
 
-RunnableEntity::RunnableEntity() : sleepForMilliseconds(100), currentState(State::terminated), debugLevel(Debuglevel::none) {
+RunnableEntity::RunnableEntity() : sleepForMilliseconds(100), currentState(State::terminated), debugLevel(Debuglevel::none), ready(false) {
 }
 
 RunnableEntity::~RunnableEntity(){
@@ -60,3 +60,14 @@ void RunnableEntity::printToConsole(std::string message){
    printToConsole(message);
    sleepForMilliseconds = time;
  }
+
+bool RunnableEntity::isReady(){
+  std::string message;
+  if(ready){
+    message = "RunnableEntity::isReady called, instance is ready to execute the run.";
+  }else{
+    message = "RunnableEntity::isReady called, instance is not yet ready to execute the run.";
+  }
+  printToConsole(message);
+  return ready;
+}
