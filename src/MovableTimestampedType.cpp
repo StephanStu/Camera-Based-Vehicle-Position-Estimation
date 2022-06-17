@@ -4,61 +4,70 @@
 #include <iostream>
 #include "MovableTimestampedType.h"
 
-MovableTimestampedType::MovableTimestampedType(const int arg) : birth(std::chrono::system_clock::now()) {
-  _data = new int;
-  *_data = arg;
-  std::cout << "CREATING instance of MyMovableClass at " << this << " allocated with size = " << sizeof(int)  << " bytes" << std::endl;
+template <typename T>
+MovableTimestampedType<T>::MovableTimestampedType(const T argument) : birth(std::chrono::system_clock::now()) {
+  data = new T;
+  *data = argument;
+  std::cout << "CREATING instance of MyMovableClass at " << this << " allocated with size = " << sizeof(T)  << " bytes" << std::endl;
 }
 
-MovableTimestampedType::MovableTimestampedType(MovableTimestampedType &&source){
+template <typename T>
+MovableTimestampedType<T>::~MovableTimestampedType(){
+  std::cout << "DELETING instance of MyMovableClass at " << this << std::endl;
+  delete data;
+}
+
+template <typename T>
+MovableTimestampedType<T>::MovableTimestampedType(MovableTimestampedType<T> &&source){
   std::cout << "MOVING (c’tor) instance " << &source << " to instance " << this << std::endl;
-  _data = source._data;
-  source._data = nullptr;
+  data = source.data;
+  source.data = nullptr;
 }
 
-MovableTimestampedType &MovableTimestampedType::operator=(MovableTimestampedType &&source){
+template <typename T>
+MovableTimestampedType<T> &MovableTimestampedType<T>::operator=(MovableTimestampedType<T> &&source){
   std::cout << "MOVING (assign) instance " << &source << " to instance " << this << std::endl;
   if (this == &source){
     return *this;
   }
-  delete _data;
-  _data = source._data;
-  source._data = nullptr;
+  delete data;
+  data = source.data;
+  source.data = nullptr;
   return *this;
 }
 
-MovableTimestampedType::~MovableTimestampedType(){
-  std::cout << "DELETING instance of MyMovableClass at " << this << std::endl;
-  delete _data;
-}
-
-MovableTimestampedType::MovableTimestampedType(const MovableTimestampedType &source){
-  _data = new int;
-  *_data = *source._data;
-  std::cout << "COPYING content of instance " << &source << " to instance " << this << std::endl;
-}
-    
-MovableTimestampedType &MovableTimestampedType::operator=(const MovableTimestampedType &source){
+template <typename T>
+MovableTimestampedType<T> &MovableTimestampedType<T>::operator=(const MovableTimestampedType<T>& source){
   std::cout << "ASSIGNING content of instance " << &source << " to instance " << this << std::endl;
   if (this == &source){
     return *this;
   }
-  delete _data;
-  _data = new int;
-  *_data = *source._data;
+  delete data;
+  data = new T;
+  *data = *source.data;
   return *this;
 }
 
-int MovableTimestampedType::getContent(){
-  int arg = *_data;
+template <typename T>
+MovableTimestampedType<T>::MovableTimestampedType(const MovableTimestampedType<T> &source){
+  data = new T;
+  *data = *source.data;
+  std::cout << "COPYING content of instance " << &source << " to instance " << this << std::endl;
+}
+
+template <typename T>
+T MovableTimestampedType<T>::getContent(){
+  T arg = *data;
   return arg;
 }
 
-void MovableTimestampedType::setContent(int arg){
-  *_data = arg;
+template <typename T>
+void MovableTimestampedType<T>::setContent(T argument){
+  *data = argument;
 }
 
- long int MovableTimestampedType::getAge(){
+template <typename T>
+ long int MovableTimestampedType<T>::getAge(){
    long int now_ms = std::chrono::duration_cast<std::chrono::milliseconds>(std::chrono::time_point_cast<std::chrono::milliseconds>(std::chrono::system_clock::now()).time_since_epoch()).count();
    long int birth_ms = std::chrono::duration_cast<std::chrono::milliseconds>(std::chrono::time_point_cast<std::chrono::milliseconds>(birth).time_since_epoch()).count();
    long int age = now_ms - birth_ms;

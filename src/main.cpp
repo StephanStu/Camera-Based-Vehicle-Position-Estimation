@@ -176,13 +176,24 @@ int testPositionService(){
 }
 
 int testMovableTimestampedType(){
-  MovableTimestampedType obj1(10); // regular constructor
-  MovableTimestampedType obj2(obj1); // copy constructor
-  std::this_thread::sleep_for(std::chrono::milliseconds(2500));
-  auto age = obj1.getAge();
-  std::cout << age << std::endl;
-  obj2 = obj1; // copy assignment operator
-  obj1 = std::move(obj2);
+  MovableTimestampedType<int> obj1(10); // regular constructor
+  cv::Mat image = cv::imread("SimpleRunwayTestImage.png" ,cv::IMREAD_COLOR);
+  MovableTimestampedType<cv::Mat> obj2(image); 
+  //MovableTimestampedType<int> obj2(obj1); // copy constructor
+  std::this_thread::sleep_for(std::chrono::milliseconds(550));
+  obj1.setContent(55);
+  MovableTimestampedType<int> obj3(66); 
+  obj1 = std::move(obj3);
+  MovableTimestampedType<int> obj4(77); 
+  // obj1(obj4);
+  std::this_thread::sleep_for(std::chrono::milliseconds(550));
+  std::cout << "# age: " << obj1.getAge() << std::endl;
+  std::cout << "# content: " << obj1.getContent() << std::endl;
+  std::this_thread::sleep_for(std::chrono::milliseconds(550));
+  std::cout << "# age: " << obj1.getAge() << std::endl;
+  std::cout << "# content: " << obj1.getContent() << std::endl;
+  //obj2 = obj1; // copy assignment operator
+  //obj1 = std::move(obj2);
   return 0;
 }
 
