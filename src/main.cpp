@@ -11,6 +11,7 @@
 #include <mutex>
 #include <algorithm>  // std::for_each
 #include <memory>
+#include <ctime>
 
 
 #include "Types.h"
@@ -18,6 +19,7 @@
 #include "CameraDriver.h"
 #include "ImageTransformer.h"
 #include "PositionService.h"
+#include "MovableTimestampedType.h"
 
 using std::vector;
 using std::cout;
@@ -173,13 +175,25 @@ int testPositionService(){
   return 0;
 }
 
+int testMovableTimestampedType(){
+  MovableTimestampedType obj1(10); // regular constructor
+  MovableTimestampedType obj2(obj1); // copy constructor
+  std::this_thread::sleep_for(std::chrono::milliseconds(2500));
+  auto age = obj1.getAge();
+  std::cout << age << std::endl;
+  obj2 = obj1; // copy assignment operator
+  obj1 = std::move(obj2);
+  return 0;
+}
+
 int main(){
   int flag;
   cv::Mat image = cv::imread("SimpleRunwayTestImage.png" ,cv::IMREAD_COLOR); // sample image to test the transformation.
   cv::VideoCapture cap("testVideo002.mp4"); // sample video to test the video-processing
   //flag = testRunnableEntity();
   //flag = testLaunchSequenceOfImageTransformer();
-  flag = testPositionService();
+  //flag = testPositionService();
+  flag = testMovableTimestampedType();
   return 0;
 }
 
