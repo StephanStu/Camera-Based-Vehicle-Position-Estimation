@@ -176,24 +176,43 @@ int testPositionService(){
 }
 
 int testMovableTimestampedType(){
-  MovableTimestampedType<int> obj1(10); // regular constructor
-  cv::Mat image = cv::imread("SimpleRunwayTestImage.png" ,cv::IMREAD_COLOR);
-  MovableTimestampedType<cv::Mat> obj2(image); 
-  //MovableTimestampedType<int> obj2(obj1); // copy constructor
-  std::this_thread::sleep_for(std::chrono::milliseconds(550));
-  obj1.setContent(55);
-  MovableTimestampedType<int> obj3(66); 
-  obj1 = std::move(obj3);
-  MovableTimestampedType<int> obj4(77); 
-  // obj1(obj4);
-  std::this_thread::sleep_for(std::chrono::milliseconds(550));
-  std::cout << "# age: " << obj1.getAge() << std::endl;
-  std::cout << "# content: " << obj1.getContent() << std::endl;
-  std::this_thread::sleep_for(std::chrono::milliseconds(550));
-  std::cout << "# age: " << obj1.getAge() << std::endl;
-  std::cout << "# content: " << obj1.getContent() << std::endl;
-  //obj2 = obj1; // copy assignment operator
-  //obj1 = std::move(obj2);
+  /*MovableTimestampedType<int> obj1(10, Debuglevel::verbose); // regular constructor
+  cv::Mat image1 = cv::imread("SimpleRunwayTestImage.png" ,cv::IMREAD_COLOR);
+  cv::Mat image2 = cv::imread("test/test01.jpg" ,cv::IMREAD_COLOR);
+  MovableTimestampedType<cv::Mat> imgobj1(image1, Debuglevel::verbose); 
+  std::this_thread::sleep_for(std::chrono::milliseconds(1000));
+  obj1.setData(55);
+  std::cout << "# ob1 1 age: " << obj1.getAge() << std::endl;
+  std::cout << "# ob1 content: " << obj1.getData() << std::endl;
+  MovableTimestampedType<cv::Mat> imgobj2(image2, Debuglevel::verbose); // copy constructor
+  imgobj1 = std::move(imgobj2);
+  std::cout << "# ob1 age: " << imgobj1.getAge() << std::endl;
+  cv::imshow( "OpenCV Test Program", imgobj1.getData() );
+  cv::waitKey(0);*/
+  
+  PositionServiceRecord myRec, myNewRec, res;
+  myRec.rawImage = cv::imread("SimpleRunwayTestImage.png" ,cv::IMREAD_COLOR);
+  myRec.binaryBirdEyesViewImage = cv::imread("test/test01.jpg" ,cv::IMREAD_COLOR);
+  myRec.distanceToLeftLane = 1.0;
+  myRec.distanceToRightLane = 1.5;;
+  myRec.deviationFromCenter = -0.5;
+  
+  MovableTimestampedType<PositionServiceRecord> cmplxObj1(myRec, Debuglevel::verbose);
+  std::this_thread::sleep_for(std::chrono::milliseconds(1000));
+  myNewRec.rawImage = cv::imread("test/test02.jpg" ,cv::IMREAD_COLOR);
+  myNewRec.binaryBirdEyesViewImage = cv::imread("test/test03.jpg" ,cv::IMREAD_COLOR);
+  myNewRec.distanceToLeftLane = 0.0;
+  myNewRec.distanceToRightLane = 0.5;;
+  myNewRec.deviationFromCenter = 1.5;
+  std::cout << "# ob1 age: " << cmplxObj1.getAge() << std::endl;
+  
+  MovableTimestampedType<PositionServiceRecord> cmplxObj2(myNewRec, Debuglevel::verbose);
+  cmplxObj1 = std::move(cmplxObj2);
+  std::cout << "# ob1 age: " << cmplxObj1.getAge() << std::endl;
+  res = cmplxObj1.getData();
+  std::cout << res.binaryBirdEyesViewImage.size() << std::endl;
+  
+  
   return 0;
 }
 

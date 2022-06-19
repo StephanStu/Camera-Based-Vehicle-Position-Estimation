@@ -5,64 +5,92 @@
 #include "MovableTimestampedType.h"
 
 template <typename T>
-MovableTimestampedType<T>::MovableTimestampedType(const T argument) : birth(std::chrono::system_clock::now()) {
+MovableTimestampedType<T>::MovableTimestampedType(const T argument) : birth(std::chrono::system_clock::now()), debugLevel(Debuglevel::none) {
   data = new T;
   *data = argument;
-  std::cout << "CREATING instance of MyMovableClass at " << this << " allocated with size = " << sizeof(T)  << " bytes" << std::endl;
+}
+
+template <typename T>
+MovableTimestampedType<T>::MovableTimestampedType(const T argument, Debuglevel typeDebuglevel) : birth(std::chrono::system_clock::now()) {
+  data = new T;
+  debugLevel = typeDebuglevel;
+  *data = argument;
+  if(debugLevel==Debuglevel::verbose){
+    std::cout << "# Creating instance of MovableTimestampedType at " << this << " allocated with size = " << sizeof(T)  << " bytes" << std::endl;
+  }
 }
 
 template <typename T>
 MovableTimestampedType<T>::~MovableTimestampedType(){
-  std::cout << "DELETING instance of MyMovableClass at " << this << std::endl;
-  delete data;
+  if(debugLevel==Debuglevel::verbose){
+    std::cout << "# Deleting instance of MovableTimestampedType at " << this << std::endl;
+  }
+  if(data != NULL){delete data;}
+  /*delete data;*/
 }
 
 template <typename T>
 MovableTimestampedType<T>::MovableTimestampedType(MovableTimestampedType<T> &&source){
-  std::cout << "MOVING (c’tor) instance " << &source << " to instance " << this << std::endl;
+  if(debugLevel==Debuglevel::verbose){
+    std::cout << "# Moving (c’tor) instance " << &source << " to instance " << this << std::endl;
+  }
   data = source.data;
-  source.data = nullptr;
+  birth = source.birth;
+  debugLevel = source.debugLevel;
+  source.data = NULL;
+}
+
+template <typename T>
+MovableTimestampedType<T>::MovableTimestampedType(const MovableTimestampedType<T> &source){
+  if(debugLevel==Debuglevel::verbose){
+    std::cout << "# Copying content of instance " << &source << " to instance " << this << std::endl;
+  }
+  data = new T;
+  *data = *source.data;
+  birth = source.birth;
+  debugLevel = source.debugLevel;
 }
 
 template <typename T>
 MovableTimestampedType<T> &MovableTimestampedType<T>::operator=(MovableTimestampedType<T> &&source){
-  std::cout << "MOVING (assign) instance " << &source << " to instance " << this << std::endl;
+  if(debugLevel==Debuglevel::verbose){
+    std::cout << "# Moving (assign) instance " << &source << " to instance " << this << std::endl;
+  }
   if (this == &source){
     return *this;
   }
   delete data;
   data = source.data;
-  source.data = nullptr;
+  birth = source.birth;
+  debugLevel = source.debugLevel;
+  source.data = NULL;
   return *this;
 }
 
 template <typename T>
 MovableTimestampedType<T> &MovableTimestampedType<T>::operator=(const MovableTimestampedType<T>& source){
-  std::cout << "ASSIGNING content of instance " << &source << " to instance " << this << std::endl;
+  if(debugLevel==Debuglevel::verbose){
+    std::cout << "# Assigning content of instance " << &source << " to instance " << this << std::endl;
+  }
   if (this == &source){
     return *this;
   }
   delete data;
   data = new T;
   *data = *source.data;
+  birth = source.birth;
+  debugLevel = source.debugLevel;
   return *this;
 }
 
 template <typename T>
-MovableTimestampedType<T>::MovableTimestampedType(const MovableTimestampedType<T> &source){
-  data = new T;
-  *data = *source.data;
-  std::cout << "COPYING content of instance " << &source << " to instance " << this << std::endl;
-}
-
-template <typename T>
-T MovableTimestampedType<T>::getContent(){
+T MovableTimestampedType<T>::getData(){
   T arg = *data;
   return arg;
 }
 
 template <typename T>
-void MovableTimestampedType<T>::setContent(T argument){
+void MovableTimestampedType<T>::setData(T argument){
   *data = argument;
 }
 
