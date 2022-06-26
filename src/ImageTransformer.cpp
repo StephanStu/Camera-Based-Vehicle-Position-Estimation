@@ -117,14 +117,9 @@ void ImageTransformer::mountCamerDriver(std::shared_ptr<CameraDriver> pointerToC
 void ImageTransformer::receiveRecord(std::promise<MovableTimestampedType<PositionServiceRecord>> &&recordPromise){
   printToConsole("ImageTransformer::receiveRecord called.");
   MovableTimestampedType<PositionServiceRecord> movableTimestampedRecord = getRecordFromQueue();
-  
   PositionServiceRecord record = movableTimestampedRecord.getData();
-  /* Do everything you need to do up to Hough Trafo here */
-  record.birdEyesViewImage = record.rawImage; // replace this later...
-  record.binaryBirdEyesViewImage = record.rawImage;  // replace this later...
-  
+  applyImageProcessingToRecord(record);
   movableTimestampedRecord.setData(record);
-  
   recordPromise.set_value(movableTimestampedRecord);
 }
 
