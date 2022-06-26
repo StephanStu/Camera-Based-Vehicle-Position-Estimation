@@ -4,6 +4,8 @@
 #include <string>
 #include "ImageServer.h"
 
+std::deque<MovableTimestampedType<PositionServiceRecord>> ImageServer::queueOfRecords;
+
 void ImageServer::addImageToQueue(cv::Mat &&image){
   std::unique_lock<std::mutex> lock(queueProtection);
   queue.push_back(std::move(image));
@@ -66,4 +68,40 @@ void ImageServer::clearQueue(){
   std::string message = "ImageServer::clearQueue called, popping " + std::to_string(size) + " images.";
   printToConsole(message);
   while(!queue.empty()) queue.pop_back();
+}
+
+void ImageServer::addRecordToQueue(MovableTimestampedType<PositionServiceRecord> &&record){
+  std::unique_lock<std::mutex> lock(queueProtection);
+  queueOfRecords.push_back(std::move(record));
+  lock.unlock();
+  condition.notify_one(); 
+  printToConsole("RecordServer::addRecordToQueue called; ingesting a record.");
+}
+   
+MovableTimestampedType<PositionServiceRecord> ImageServer::getRecordFromQueue(){
+  printToConsole("RecordServer::getRecordFromQueue called.");
+  std::unique_lock<std::mutex> lock(queueProtection);
+  while(queueOfRecords.empty()){
+    condition.wait(lock); 
+  }
+  MovableTimestampedType<PositionServiceRecord> record = std::move(queueOfRecords.back());
+  queueOfRecords.pop_back();
+  lock.unlock();
+  condition.notify_one();
+  printToConsole("RecordServer::getRecordFromQueue finished; returning a record to requester.");
+  return record;
+}
+
+void ImageServer::clearQueueOfRecords(){
+  unsigned int size = queueOfRecords.size();
+  std::string message = "RecordServer::clearQueueOfRecords called, popping " + std::to_string(size) + " records.";
+  printToConsole(message);
+  while(!queueOfRecords.empty()) queueOfRecords.pop_back();
+}
+
+unsigned int ImageServer::getQueueOfRecordsLength(){
+  unsigned int size = queueOfRecords.size();
+  std::string message = "RecordServer::getQueueOfRecordsLength called, queue is of size " + std::to_string(size) + ".";
+  printToConsole(message);
+  return size;
 }

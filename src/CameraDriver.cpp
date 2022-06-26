@@ -12,7 +12,7 @@ CameraDriver::CameraDriver(Debuglevel cameraDriverDebugLevel){
 
 void CameraDriver::run(){
   printToConsole("CameraDriver::run called.");
-  threads.emplace_back(std::thread(&CameraDriver::sourceRawImages, this));
+  threads.emplace_back(std::thread(&CameraDriver::manageStateSwitches, this));
 }
     
 void CameraDriver::calibrate(){
@@ -102,30 +102,58 @@ void CameraDriver::undistortImage(cv::Mat& source, cv::Mat& destination){
   }
 }
 
-void CameraDriver::sourceRawImages(){
+void CameraDriver::runInRunningState(){
+  printToConsole("CameraDriver::runInRunningState is called.");
+  if(getQueueOfRecordsLength() < recordQueueBufferSize){
+    // PROVIDE A SOUCE HERE
+    cv::Mat rawImage = cv::imread("test/test01.jpg" ,cv::IMREAD_COLOR);
+    // undistort and save in queue, the main responsibility of the camera driver
+    cv::Mat undistortedImage;
+    undistortImage(rawImage, undistortedImage);
+    PositionServiceRecord record;
+    record.rawImage = rawImage;
+    record.undistortedImage = undistortedImage;
+    MovableTimestampedType<PositionServiceRecord> movableTimestampedRecord(record, debugLevel);
+    addRecordToQueue(std::move(movableTimestampedRecord));
+  }
+}
+
+void CameraDriver::runInInitializingState(){
+  printToConsole("CameraDriver::runInInitializingState is called.");
+  if(!ready){ // Camera is not calibrated, hence we must read from file
+    readCameraCalibrationDataFromFile();
+  }
+}
+
+void CameraDriver::runInFreezedState(){
+  printToConsole("CameraDriver::runInFreezedState is called.");
+}
+
+void CameraDriver::runInTerminatedState(){
+  printToConsole("CameraDriver::runInTerminatedState is called.");
+}
+
+void CameraDriver::manageStateSwitches(){
   while(true){
     if(currentState == initializing){
-      printToConsole("CameraDriver::sourceRawImages is called, instance is waiting in state initializing.");
+      printToConsole("CameraDriver::manageStateSwitches is called, instance is waiting in state initializing.");
+      runInInitializingState();
       std::this_thread::sleep_for(std::chrono::milliseconds(sleepForMilliseconds));
     }
     if(currentState == running){
-      printToConsole("CameraDriver::sourceRawImages is running and feeding images into its queue.");
-      // PROVIDE A SOUCE HERE
-      cv::Mat rawImage = cv::imread("test/test01.jpg" ,cv::IMREAD_COLOR);
-      // undistort and save in queue, the main responsibility of the camera driver
-      cv::Mat undistortedImage;
-      undistortImage(rawImage, undistortedImage);
-      addImageToQueue(std::move(undistortedImage));
+      printToConsole("CameraDriver::manageStateSwitches, instance is in state running.");
+      runInRunningState();
       std::this_thread::sleep_for(std::chrono::milliseconds(sleepForMilliseconds));
     }
     if(currentState == terminated){
-      printToConsole("CameraDriver::sourceRawImages is called, instance has reached state terminated. Cleaning up & quitting.");
-      clearQueue();
+      printToConsole("CameraDriver::manageStateSwitches is called, instance has reached state terminated.");
+      runInTerminatedState();
       break;
     }
     if(currentState == freezed){
-      printToConsole("CameraDriver::sourceRawImages is called, instance is waiting in state freezed.");
+      printToConsole("CameraDriver::manageStateSwitches is called, instance is waiting in state freezed.");
+      runInFreezedState();
       std::this_thread::sleep_for(std::chrono::milliseconds(sleepForMilliseconds));
     }
   }
-};
+}

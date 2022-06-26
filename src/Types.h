@@ -8,10 +8,18 @@ enum State {initializing, running, freezed, terminated}; // states to control th
 
 struct PositionServiceRecord{
   cv::Mat rawImage;
+  cv::Mat undistortedImage;
+  cv::Mat birdEyesViewImage;
   cv::Mat binaryBirdEyesViewImage;
   float distanceToLeftLane;
   float distanceToRightLane;
-  float deviationFromCenter;
+  float angle;
+  float deviation;
+};
+
+struct LanePosition{
+  float angle;
+  float deviation;
 };
 
 #endif

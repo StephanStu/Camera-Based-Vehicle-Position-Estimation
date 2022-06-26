@@ -85,12 +85,18 @@ MovableTimestampedType<T> &MovableTimestampedType<T>::operator=(const MovableTim
 
 template <typename T>
 T MovableTimestampedType<T>::getData(){
+  if(debugLevel==Debuglevel::verbose){
+    std::cout << "# Returning data with getData() from instance " << this << std::endl;
+  }
   T arg = *data;
   return arg;
 }
 
 template <typename T>
 void MovableTimestampedType<T>::setData(T argument){
+  if(debugLevel==Debuglevel::verbose){
+    std::cout << "# Modifying data with setData() at instance " << this << std::endl;
+  }
   *data = argument;
 }
 

@@ -143,7 +143,7 @@ int main()
   t.join();
 }
 */
-int testLaunchSequenceOfImageTransformer(){
+/*int testLaunchSequenceOfImageTransformer(){
   
   //std::shared_ptr<CameraDriver> accessCameraDriver(new CameraDriver(Debuglevel::verbose)); // create an instance + shared pointer to a CamerDriver
   std::shared_ptr<CameraDriver> accessCameraDriver(new CameraDriver(Debuglevel::verbose)); // create an instance + shared pointer to a CamerDriver
@@ -156,22 +156,38 @@ int testLaunchSequenceOfImageTransformer(){
       cv::Mat image = accessImageTransformer->getImageFromMountedCameraDriver();
       std::cout << accessImageTransformer->getCurrentState() << std::endl;
       std::cout << image.size() << std::endl;
-    }*/
+    }
     cv::Mat image = accessImageTransformer->getImageFromMountedCameraDriver();
     std::cout << accessImageTransformer->getCurrentState() << std::endl;
     std::cout << image.size() << std::endl;
     std::this_thread::sleep_for(std::chrono::milliseconds(500));
   }
   return 0;
-}
+}*/
 
-int testPositionService(){
+int testPositionService01(){
   PositionService positionService(Debuglevel::verbose);
   positionService.initialize();
-  std::this_thread::sleep_for(std::chrono::milliseconds(250));
+  std::this_thread::sleep_for(std::chrono::milliseconds(2000));
+  std::cout << "##############################################" << std::endl;
   positionService.run();
-  std::this_thread::sleep_for(std::chrono::milliseconds(250));
+  std::this_thread::sleep_for(std::chrono::milliseconds(2000));
+  std::cout << "##############################################" << std::endl;
   positionService.terminate();
+  return 0;
+}
+
+int testPositionService02(){
+  PositionService positionService(Debuglevel::verbose);
+  positionService.runCameraCalibration(true);
+  return 0;
+}
+
+int moveAndShowAge(MovableTimestampedType<PositionServiceRecord> &&obj){
+  std::cout << "-> Age after moving is" << obj.getAge() << std::endl;
+  std::cout << "-> Size after moving is" << obj.getData().binaryBirdEyesViewImage.size() << std::endl;
+  cv::imshow( "OpenCV Test Program", obj.getData().binaryBirdEyesViewImage);
+  cv::waitKey(0);
   return 0;
 }
 
@@ -195,7 +211,7 @@ int testMovableTimestampedType(){
   myRec.binaryBirdEyesViewImage = cv::imread("test/test01.jpg" ,cv::IMREAD_COLOR);
   myRec.distanceToLeftLane = 1.0;
   myRec.distanceToRightLane = 1.5;;
-  myRec.deviationFromCenter = -0.5;
+  myRec.deviation = -0.5;
   
   MovableTimestampedType<PositionServiceRecord> cmplxObj1(myRec, Debuglevel::verbose);
   std::this_thread::sleep_for(std::chrono::milliseconds(1000));
@@ -203,7 +219,7 @@ int testMovableTimestampedType(){
   myNewRec.binaryBirdEyesViewImage = cv::imread("test/test03.jpg" ,cv::IMREAD_COLOR);
   myNewRec.distanceToLeftLane = 0.0;
   myNewRec.distanceToRightLane = 0.5;;
-  myNewRec.deviationFromCenter = 1.5;
+  myNewRec.deviation = 1.5;
   std::cout << "# ob1 age: " << cmplxObj1.getAge() << std::endl;
   
   MovableTimestampedType<PositionServiceRecord> cmplxObj2(myNewRec, Debuglevel::verbose);
@@ -211,7 +227,7 @@ int testMovableTimestampedType(){
   std::cout << "# ob1 age: " << cmplxObj1.getAge() << std::endl;
   res = cmplxObj1.getData();
   std::cout << res.binaryBirdEyesViewImage.size() << std::endl;
-  
+  int flag = moveAndShowAge(std::move(cmplxObj1));
   
   return 0;
 }
@@ -222,8 +238,9 @@ int main(){
   cv::VideoCapture cap("testVideo002.mp4"); // sample video to test the video-processing
   //flag = testRunnableEntity();
   //flag = testLaunchSequenceOfImageTransformer();
-  //flag = testPositionService();
-  flag = testMovableTimestampedType();
+  flag = testPositionService01();
+  //flag = testPositionService02();
+  //flag = testMovableTimestampedType();
   return 0;
 }
 
