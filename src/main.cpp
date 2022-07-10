@@ -15,11 +15,10 @@
 
 
 #include "Types.h"
-#include "PositionServer.h"
 #include "CameraDriver.h"
 #include "ImageTransformer.h"
-#include "PositionService.h"
 #include "MovableTimestampedType.h"
+#include "PositionService.h"
 
 using std::vector;
 using std::cout;
@@ -101,111 +100,7 @@ int runVideoTest(cv::VideoCapture cap){
   return 0;
 }
 
-
-int testRunnableEntity(){
-  std::vector<std::future<void>> futures;
-  std::shared_ptr<CameraDriver> accessCameraDriver(new CameraDriver(Debuglevel::verbose));
-  PositionServer positionServer(Debuglevel::verbose);
-  ImageTransformer imageTransformer(Debuglevel::verbose);
-  std::thread m(&ImageTransformer::mountCamerDriver, &imageTransformer, accessCameraDriver);
-  m.join();
- 
-  futures.emplace_back(std::async(std::launch::async, &CameraDriver::run, accessCameraDriver));
-  futures.emplace_back(std::async(std::launch::async, &PositionServer::run, &positionServer));
-  futures.emplace_back(std::async(std::launch::async, &ImageTransformer::run, &imageTransformer));
-  std::for_each(futures.begin(), futures.end(), [](std::future<void> &ftr) {
-        ftr.wait();
-  });
-  std::promise<cv::Mat> prms;
-  std::future<cv::Mat> ftr = prms.get_future();
-  std::this_thread::sleep_for(std::chrono::milliseconds(5000));
-  std::thread t(&CameraDriver::receiveImageFromQueue, accessCameraDriver, std::move(prms));
-  /*auto f = [cameraDriver](prms){ // using a lambda function here auto f = [VARIABLES FROM CALLING SCOPE GO HERE]( PARAMETERS GO HERE ){ FUNCTION GOES HERE }
-    cameraDriver.sendImageFromQueue(std::move(prms)); 
-  };*/
-  t.join();
-  cv::Mat image = ftr.get();
-  cv::imshow( "OpenCV Test Program", image );
-  cv::waitKey(0);
-  return 0;
-}
-
-/*class bar {
-public:
-  void foo() {
-    std::cout << "hello from member function" << std::endl;
-  }
-};
-
-int main()
-{
-  std::thread t(&bar::foo, bar());
-  t.join();
-}
-*/
-/*int testLaunchSequenceOfImageTransformer(){
-  
-  //std::shared_ptr<CameraDriver> accessCameraDriver(new CameraDriver(Debuglevel::verbose)); // create an instance + shared pointer to a CamerDriver
-  std::shared_ptr<CameraDriver> accessCameraDriver(new CameraDriver(Debuglevel::verbose)); // create an instance + shared pointer to a CamerDriver
-  std::shared_ptr<ImageTransformer> accessImageTransformer(new ImageTransformer(Debuglevel::verbose)); // create an instace + shared pointer to an ImageTransformer.
-  accessImageTransformer->mountCamerDriver(accessCameraDriver);
-  std::async(std::launch::async, &CameraDriver::run, accessCameraDriver);
-  while(true){
-    std::cout << accessCameraDriver->getQueueLength() << std::endl;
-    /*if(accessCameraDriver->getQueueLength() > 0){
-      cv::Mat image = accessImageTransformer->getImageFromMountedCameraDriver();
-      std::cout << accessImageTransformer->getCurrentState() << std::endl;
-      std::cout << image.size() << std::endl;
-    }
-    cv::Mat image = accessImageTransformer->getImageFromMountedCameraDriver();
-    std::cout << accessImageTransformer->getCurrentState() << std::endl;
-    std::cout << image.size() << std::endl;
-    std::this_thread::sleep_for(std::chrono::milliseconds(500));
-  }
-  return 0;
-}*/
-
-int testPositionService01(){
-  PositionService positionService(Debuglevel::verbose);
-  positionService.initialize();
-  std::this_thread::sleep_for(std::chrono::milliseconds(2000));
-  std::cout << "##############################################" << std::endl;
-  positionService.run();
-  std::this_thread::sleep_for(std::chrono::milliseconds(2000));
-  std::cout << "##############################################" << std::endl;
-  positionService.terminate();
-  return 0;
-}
-
-int testPositionService02(){
-  PositionService positionService(Debuglevel::verbose);
-  positionService.runCameraCalibration(true);
-  return 0;
-}
-
-int moveAndShowAge(MovableTimestampedType<PositionServiceRecord> &&obj){
-  std::cout << "-> Age after moving is" << obj.getAge() << std::endl;
-  std::cout << "-> Size after moving is" << obj.getData().binaryBirdEyesViewImage.size() << std::endl;
-  cv::imshow( "OpenCV Test Program", obj.getData().binaryBirdEyesViewImage);
-  cv::waitKey(0);
-  return 0;
-}
-
 int testMovableTimestampedType(){
-  /*MovableTimestampedType<int> obj1(10, Debuglevel::verbose); // regular constructor
-  cv::Mat image1 = cv::imread("SimpleRunwayTestImage.png" ,cv::IMREAD_COLOR);
-  cv::Mat image2 = cv::imread("test/test01.jpg" ,cv::IMREAD_COLOR);
-  MovableTimestampedType<cv::Mat> imgobj1(image1, Debuglevel::verbose); 
-  std::this_thread::sleep_for(std::chrono::milliseconds(1000));
-  obj1.setData(55);
-  std::cout << "# ob1 1 age: " << obj1.getAge() << std::endl;
-  std::cout << "# ob1 content: " << obj1.getData() << std::endl;
-  MovableTimestampedType<cv::Mat> imgobj2(image2, Debuglevel::verbose); // copy constructor
-  imgobj1 = std::move(imgobj2);
-  std::cout << "# ob1 age: " << imgobj1.getAge() << std::endl;
-  cv::imshow( "OpenCV Test Program", imgobj1.getData() );
-  cv::waitKey(0);*/
-  
   PositionServiceRecord myRec, myNewRec, res;
   myRec.rawImage = cv::imread("SimpleRunwayTestImage.png" ,cv::IMREAD_COLOR);
   myRec.binaryBirdEyesViewImage = cv::imread("test/test01.jpg" ,cv::IMREAD_COLOR);
@@ -227,8 +122,53 @@ int testMovableTimestampedType(){
   std::cout << "# ob1 age: " << cmplxObj1.getAge() << std::endl;
   res = cmplxObj1.getData();
   std::cout << res.binaryBirdEyesViewImage.size() << std::endl;
-  int flag = moveAndShowAge(std::move(cmplxObj1));
   
+  return 0;
+}
+
+int testCameraDriver(){
+  std::shared_ptr<CameraDriver> accessCameraDriver(new CameraDriver(Debuglevel::verbose));
+  accessCameraDriver->calibrate();
+  if (accessCameraDriver->recordIsCurrent()){
+    std::cout << "# Current." << std::endl;
+  } else {
+    std::cout << "# Not current." << std::endl;
+  }
+  accessCameraDriver->isReady();
+  accessCameraDriver->run();
+  //MovableTimestampedType<PositionServiceRecord> cmplxObj1 = accessCameraDriver->getRecord(); // stuck, because no image is here
+  return 0;
+}
+
+int testPositionService(){
+  PositionServiceRecord record;
+  std::vector<cv::Vec4i> lines; // a vector to store lines of the image, using the cv::Vec4i-Datatype
+  PositionService positionService(Debuglevel::verbose);
+  positionService.initialize();
+  std::this_thread::sleep_for(std::chrono::milliseconds(250));
+  std::cout << "##############################################" << std::endl;
+  positionService.run();
+  std::this_thread::sleep_for(std::chrono::milliseconds(10000));
+  std::cout << "##############################################" << std::endl;
+  positionService.terminate();
+  positionService.getRecord(record);
+  cv::imshow( "Raw Image", record.rawImage);
+  cv::imshow( "Binary Bird Eye's View", record.binaryBirdEyesViewImage);
+  /*
+  threshold: The minimum number of intersections to "*detect*" a line
+  minLineLength: The minimum number of points that can form a line. Lines with less than this number of points are disregarded.
+  maxLineGap: The maximum gap between two points to be considered in the same line.
+  */
+  cv::HoughLinesP(record.binaryBirdEyesViewImage, lines, 1, CV_PI/180, 100, 25, 25);
+  cv::Mat output = cv::Mat::zeros(record.binaryBirdEyesViewImage.size(), CV_8UC3);
+    // Draw lines on the image
+    for (size_t i=0; i<lines.size(); i++) {
+      cv::Vec4i l = lines[i];
+      cv::line(output, cv::Point(l[0], l[1]), cv::Point(l[2], l[3]), cv::Scalar(255, 255, 255), 3, cv::LINE_AA);
+    }
+  cv::imshow( "Result", output);
+  
+  cv::waitKey(0);
   return 0;
 }
 
@@ -236,11 +176,8 @@ int main(){
   int flag;
   cv::Mat image = cv::imread("SimpleRunwayTestImage.png" ,cv::IMREAD_COLOR); // sample image to test the transformation.
   cv::VideoCapture cap("testVideo002.mp4"); // sample video to test the video-processing
-  //flag = testRunnableEntity();
-  //flag = testLaunchSequenceOfImageTransformer();
-  flag = testPositionService01();
-  //flag = testPositionService02();
-  //flag = testMovableTimestampedType();
+  //flag = testCameraDriver();
+  flag = testPositionService();
   return 0;
 }
 

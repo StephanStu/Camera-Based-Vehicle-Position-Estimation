@@ -4,6 +4,12 @@
 #include <iostream>
 #include "MovableTimestampedType.h"
 
+
+template <typename T>
+MovableTimestampedType<T>::MovableTimestampedType() : birth(std::chrono::system_clock::now()), debugLevel(Debuglevel::none) {
+  data = new T;
+}
+
 template <typename T>
 MovableTimestampedType<T>::MovableTimestampedType(const T argument) : birth(std::chrono::system_clock::now()), debugLevel(Debuglevel::none) {
   data = new T;

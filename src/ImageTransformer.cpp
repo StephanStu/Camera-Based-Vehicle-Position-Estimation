@@ -1,11 +1,11 @@
 #include "ImageTransformer.h"
 
-ImageTransformer::ImageTransformer(){
+ImageTransformer::ImageTransformer() : cameraDriverIsMounted(false) {
   debugLevel = Debuglevel::none;
   printToConsole("ImageTransformer::ImageTransformer called.");
 }
 
-ImageTransformer::ImageTransformer(Debuglevel imageTransformerDebugLevel){
+ImageTransformer::ImageTransformer(Debuglevel imageTransformerDebugLevel) : cameraDriverIsMounted(false) {
   debugLevel = imageTransformerDebugLevel;
   printToConsole("ImageTransformer::ImageTransformer called.");
 }
@@ -14,6 +14,200 @@ void ImageTransformer::run(){
   printToConsole("ImageTransformer::run called.");
   threads.emplace_back(std::thread(&ImageTransformer::manageStateSwitches, this));
 }
+
+MovableTimestampedType<PositionServiceRecord> ImageTransformer::getRecord(){
+  printToConsole("ImageTransformer::getRecord called.");
+  std::unique_lock<std::mutex> lock(queueProtection);
+  while(currentState == freezed){
+    condition.wait(lock); 
+  }
+  while(queue.empty()){
+    condition.wait(lock); 
+  }
+  MovableTimestampedType<PositionServiceRecord> movableTimestampedRecord = std::move(queue.back());
+  PositionServiceRecord record = movableTimestampedRecord.getData();
+  fillRecord(record);
+  movableTimestampedRecord.setData(record);
+  queue.pop_back();
+  lock.unlock();
+  condition.notify_one();
+  return movableTimestampedRecord;
+}
+
+void ImageTransformer::receiveRecord(std::promise<MovableTimestampedType<PositionServiceRecord>> &&recordPromise){
+  printToConsole("ImageTransformer::receiveRecord called.");
+  std::unique_lock<std::mutex> lock(queueProtection);
+  while(currentState == freezed){
+    condition.wait(lock); 
+  }
+  while(queue.empty()){
+    condition.wait(lock); 
+  }
+  MovableTimestampedType<PositionServiceRecord> movableTimestampedRecord = std::move(queue.back());
+  PositionServiceRecord record = movableTimestampedRecord.getData();
+  fillRecord(record);
+  movableTimestampedRecord.setData(record);
+  recordPromise.set_value(movableTimestampedRecord);
+  queue.pop_back();
+  lock.unlock();
+  condition.notify_one();
+}
+
+void ImageTransformer::mountCamerDriver(std::shared_ptr<CameraDriver> pointerToCameraDriver){
+  printToConsole("ImageTransformer::mountCameraDriver called, instance of CamerDriver is mounted by keeping the shared pointer.");
+  accessCameraDriver = pointerToCameraDriver;
+  cameraDriverIsMounted = true;
+}
+
+void ImageTransformer::fillRecord(PositionServiceRecord& record){
+  printToConsole("ImageTransformer::fillRecord called.");
+  cv::Mat undistortedImage = record.undistortedImage;
+  cv::Mat gaussianBlurredImage;
+  cv::Mat grayImage;
+  cv::Mat birdEyesViewImage;
+  cv::Mat binaryBirdEyesViewImage;
+  cv::Mat binaryEdgesDetcted;
+  applyGausianBlurr(undistortedImage , gaussianBlurredImage);
+  convertToGrayImage(gaussianBlurredImage, grayImage);
+  convertToBirdEyesView(grayImage, birdEyesViewImage);
+  //maskBirdEyesView();
+  convertToBinaryImage(birdEyesViewImage, binaryBirdEyesViewImage);
+  detectEdges(binaryBirdEyesViewImage, binaryEdgesDetcted);
+  record.birdEyesViewImage = birdEyesViewImage;
+  record.binaryBirdEyesViewImage = binaryEdgesDetcted;
+}
+
+void ImageTransformer::manageStateSwitches(){
+  while(true){
+    if(currentState == initializing){
+      printToConsole("ImageTransformer::manageStateSwitches is called, instance is waiting in state initializing.");
+      runInInitializingState();
+      std::this_thread::sleep_for(std::chrono::milliseconds(sleepForMilliseconds));
+    }
+    if(currentState == running){
+      printToConsole("ImageTransformer::manageStateSwitches, instance is in state running.");
+      runInRunningState();
+      std::this_thread::sleep_for(std::chrono::milliseconds(sleepForMilliseconds));
+    }
+    if(currentState == terminated){
+      printToConsole("ImageTransformer::manageStateSwitches is called, instance has reached state terminated.");
+      runInTerminatedState();
+      break;
+    }
+    if(currentState == freezed){
+      printToConsole("ImageTransformer::manageStateSwitches is called, instance is waiting in state freezed.");
+      runInFreezedState();
+      std::this_thread::sleep_for(std::chrono::milliseconds(sleepForMilliseconds));
+    }
+  }
+}
+
+void ImageTransformer::runInRunningState(){
+  printToConsole("ImageTransformer::runInRunningState is called.");
+  if(getQueueLength() <= recordBufferSize){
+    getRecordFromCameraDriver();
+  }else{
+    printToConsole("ImageTransformer::runInRunningState: Popping outdated images from the queue to create room for fresh information.");
+    popOneRecord();
+    getRecordFromCameraDriver();
+  }
+  std::this_thread::sleep_for(std::chrono::milliseconds(sleepForMilliseconds));
+}
+
+void ImageTransformer::runInInitializingState(){
+  printToConsole("ImageTransformer::runInInitializingState is called.");
+  if(!ready){
+    if(!birdsEyeTransformationMatrixIsReady){
+      setBirdEyesTransformMatrix();
+    }
+    if(cameraDriverIsMounted){
+      ready = true;
+    } else {
+      printToConsole("ImageTransformer::runInInitializingState is called but camera driver is not mounted yet.");
+    }
+  }
+}
+
+void ImageTransformer::runInFreezedState(){
+  printToConsole("ImageTransformer::runInFreezedState is called. Blocking changes to attributes now.");
+  std::this_thread::sleep_for(std::chrono::milliseconds(sleepForMilliseconds));
+}
+
+void ImageTransformer::runInTerminatedState(){
+  printToConsole("ImageTransformer::runInTerminatedState is called.");
+  clearQueue();
+}
+
+void ImageTransformer::convertToBinaryImage(cv::Mat& source, cv::Mat& destination){
+  printToConsole("ImageTransformer::convertToBinaryImage called.");
+  cv::threshold(source, destination, binaryThresholdValue, maxBinaryValue, cv::THRESH_BINARY);
+}
+
+void ImageTransformer::convertToBirdEyesView(cv::Mat& source, cv::Mat& destination){
+  printToConsole("ImageTransformer::convertToBirdEyesView called.");
+  cv::Size birdsEyeImageSize(birdsEyeImageWidth, birdsEyeImageHeight);
+  cv::warpPerspective(source,			// Source image
+                        destination, 	// Destination image
+                        birdsEyeTransformMatrix, // Transformation matrix
+                        birdsEyeImageSize,   // Size for output image. Before: image.size()
+                        cv::INTER_LINEAR, // cv::WARP_INVERSE_MAP | cv::INTER_LINEAR,
+                        cv::BORDER_CONSTANT, cv::Scalar::all(0) // Fill border with black
+                        );
+}
+
+void ImageTransformer::convertToGrayImage(cv::Mat& source, cv::Mat& destination){
+  printToConsole("ImageTransformer::convertToGrayImage called.");
+  cv::cvtColor(source, destination, cv::COLOR_BGR2GRAY);
+}
+
+void ImageTransformer::detectEdges(cv::Mat& source, cv::Mat& destination){
+  printToConsole("ImageTransformer::detectEdges called.");
+  cv::Canny(source, destination, 50, 200);
+}
+
+void ImageTransformer::applyGausianBlurr(cv::Mat& source, cv::Mat& destination){
+  printToConsole("ImageTransformer::applyGausianBlurr called.");
+  cv::Size size(kernelsize, kernelsize);
+  cv::GaussianBlur(source, destination, size, 0, 0);
+}
+
+void ImageTransformer::maskBirdEyesView(cv::Mat& source, cv::Mat& destination){
+  printToConsole("ImageTransformer::maskBirdEyesView called BUT IS NOT IMPLEMENTED YET.");
+  destination = source; // WOKR THIS OUT
+}
+
+void ImageTransformer::setBirdEyesTransformMatrix(){
+  printToConsole("ImageTransformer::setBirdEyesTransformMatrix called.");
+  cv::Point2f objPts[4], imgPts[4];
+  objPts[0].x = objectPoint1XValue; objPts[0].y = objectPoint1YValue; 
+  objPts[1].x = objectPoint2XValue; objPts[1].y = objectPoint2YValue;
+  objPts[2].x = objectPoint3XValue; objPts[2].y = objectPoint3YValue; 
+  objPts[3].x = objectPoint4XValue; objPts[3].y = objectPoint4YValue; 
+  imgPts[0].x = 0; imgPts[0].y = 0;
+  imgPts[1].x = birdsEyeImageWidth; imgPts[1].y = 0;
+  imgPts[2].x = birdsEyeImageWidth; imgPts[2].y = birdsEyeImageHeight; 
+  imgPts[3].x = 0; imgPts[3].y = birdsEyeImageHeight; 
+  double Z = 1;
+  cv::Mat H = cv::getPerspectiveTransform(objPts, imgPts);
+  H.at<double>(2, 2) = Z;
+  birdsEyeTransformMatrix = H;
+  birdsEyeTransformationMatrixIsReady = true;
+}
+
+void ImageTransformer::getRecordFromCameraDriver(){
+  if(cameraDriverIsMounted){
+    printToConsole("ImageTransformer::getRecordFromCameraDriver called, pulling a record with promise-future-mechanism from mounted camera driver.");
+    std::promise<MovableTimestampedType<PositionServiceRecord>> prms;
+    std::future<MovableTimestampedType<PositionServiceRecord>> ftr = prms.get_future();
+    std::thread t(&CameraDriver::receiveRecord, accessCameraDriver, std::move(prms));
+    t.join();
+    addRecord(std::move(ftr.get()));
+  } else {
+    printToConsole("ImageTransformer::getRecordFromCameraDriver called, but camera driver is not mounted, returning an empty record.");
+  }
+}
+
+/*
 
 void ImageTransformer::applyImageProcessingToRecord(PositionServiceRecord& record){
   printToConsole("ImageTransformer::applyImageProcessingToRecord called.");
@@ -94,7 +288,7 @@ void ImageTransformer::mountCamerDriver(std::shared_ptr<CameraDriver> pointerToC
   accessCameraDriver = pointerToCameraDriver;
 }
 
-/*cv::Mat ImageTransformer::getImageFromMountedCameraDriver(){
+cv::Mat ImageTransformer::getImageFromMountedCameraDriver(){
   printToConsole("ImageTransformer::getImageFromMountedCameraDriver called, pulling an image with promise-future-mechanism.");
   std::promise<cv::Mat> prms;
   std::future<cv::Mat> ftr = prms.get_future();
@@ -102,9 +296,9 @@ void ImageTransformer::mountCamerDriver(std::shared_ptr<CameraDriver> pointerToC
   t.join();
   cv::Mat image = ftr.get();
   return image;
-}*/
+}
 
-/*MovableTimestampedType<PositionServiceRecord> ImageTransformer::getRecordFromMountedCameraDriver(){
+MovableTimestampedType<PositionServiceRecord> ImageTransformer::getRecordFromMountedCameraDriver(){
   printToConsole("ImageTransformer::getRecordFromMountedCameraDriver called, pulling a record with promise-future-mechanism from mounted camera driver.");
   std::promise<MovableTimestampedType<PositionServiceRecord>> prms;
   std::future<MovableTimestampedType<PositionServiceRecord>> ftr = prms.get_future();
@@ -112,7 +306,7 @@ void ImageTransformer::mountCamerDriver(std::shared_ptr<CameraDriver> pointerToC
   t.join();
   MovableTimestampedType<PositionServiceRecord> movableTimestampedRecord = ftr.get();
   return movableTimestampedRecord;
-}*/
+}
 
 void ImageTransformer::receiveRecord(std::promise<MovableTimestampedType<PositionServiceRecord>> &&recordPromise){
   printToConsole("ImageTransformer::receiveRecord called.");
@@ -167,4 +361,4 @@ void ImageTransformer::manageStateSwitches(){
       std::this_thread::sleep_for(std::chrono::milliseconds(sleepForMilliseconds));
     }
   }
-}
+}*/

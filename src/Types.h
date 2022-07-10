@@ -17,7 +17,7 @@ struct PositionServiceRecord{
   float deviation;
 };
 
-struct LanePosition{
+struct Position{
   float angle;
   float deviation;
 };

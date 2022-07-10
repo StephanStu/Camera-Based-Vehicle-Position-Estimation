@@ -11,8 +11,9 @@ MovableTimestampedType:
 template <typename T>
 class MovableTimestampedType{
   public:
-    MovableTimestampedType(const T argument); // constructor
-    MovableTimestampedType(const T argument, Debuglevel typeDebuglevel); // constructor with debug-level
+    MovableTimestampedType(); // simple constructor
+    MovableTimestampedType(const T argument); // constructor with argument
+    MovableTimestampedType(const T argument, Debuglevel typeDebuglevel); // constructor with argument + debug-level
     MovableTimestampedType(MovableTimestampedType<T> &&source); // move constructor
     MovableTimestampedType<T> &operator=(MovableTimestampedType<T> &&source); // move assignment operator
     ~MovableTimestampedType(); // destructor

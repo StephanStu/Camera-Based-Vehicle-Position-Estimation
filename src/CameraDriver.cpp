@@ -1,11 +1,10 @@
 #include "CameraDriver.h"
 
-CameraDriver::CameraDriver(){
+CameraDriver::CameraDriver() : newRecordIsCurrent(false) {
   debugLevel = Debuglevel::none;
-  printToConsole("CameraDriver::CameraDriver called.");
 }
 
-CameraDriver::CameraDriver(Debuglevel cameraDriverDebugLevel){
+CameraDriver::CameraDriver(Debuglevel cameraDriverDebugLevel) : newRecordIsCurrent(false) {
   debugLevel = cameraDriverDebugLevel;
   printToConsole("CameraDriver::CameraDriver called.");
 }
@@ -102,20 +101,62 @@ void CameraDriver::undistortImage(cv::Mat& source, cv::Mat& destination){
   }
 }
 
+bool CameraDriver::recordIsCurrent(){
+  printToConsole("CameraDriver::newRecordIsCurrent called.");
+  return newRecordIsCurrent;
+}
+
+void CameraDriver::receiveRecord(std::promise<MovableTimestampedType<PositionServiceRecord>> &&recordPromise){
+  printToConsole("CameraDriver::receiveRecord is called.");
+  std::unique_lock<std::mutex> lock(newRecordProtection);
+  while(currentState == freezed){
+    condition.wait(lock); 
+  }
+  while(!newRecordIsCurrent){
+    condition.wait(lock); 
+  }
+  recordPromise.set_value(newRecord);
+  lock.unlock();
+  condition.notify_one();
+  newRecordIsCurrent = false;
+  printToConsole("CameraDriver::receiveRecord send a record and newRecord is not longer current.");
+}
+
+MovableTimestampedType<PositionServiceRecord> CameraDriver::getRecord(){
+  printToConsole("CameraDriver::getRecord is called.");
+  std::unique_lock<std::mutex> lock(newRecordProtection);
+  while(currentState == freezed){
+    condition.wait(lock); 
+  }
+  while(!newRecordIsCurrent){
+    condition.wait(lock); 
+  }
+  MovableTimestampedType<PositionServiceRecord> movableTimestampedRecord = std::move(newRecord);
+  lock.unlock();
+  condition.notify_one();
+  newRecordIsCurrent = false;
+  printToConsole("CameraDriver::getRecord returned a record and newRecord is not longer current.");
+  return movableTimestampedRecord;
+}
+  
+void CameraDriver::setNewRecord(cv::Mat &&rawImage){
+  printToConsole("CameraDriver::setNewRecord is called.");
+  cv::Mat undistortedImage;
+  undistortImage(rawImage, undistortedImage);
+  PositionServiceRecord record;
+  record.rawImage = std::move(rawImage);
+  record.undistortedImage = std::move(undistortedImage);
+  MovableTimestampedType<PositionServiceRecord> movableTimestampedRecord(record, debugLevel);
+  std::unique_lock<std::mutex> lock(newRecordProtection);
+  newRecord = std::move(movableTimestampedRecord);
+  lock.unlock();
+  newRecordIsCurrent = true;
+}
+
 void CameraDriver::runInRunningState(){
   printToConsole("CameraDriver::runInRunningState is called.");
-  if(getQueueOfRecordsLength() < recordQueueBufferSize){
-    // PROVIDE A SOUCE HERE
-    cv::Mat rawImage = cv::imread("test/test01.jpg" ,cv::IMREAD_COLOR);
-    // undistort and save in queue, the main responsibility of the camera driver
-    cv::Mat undistortedImage;
-    undistortImage(rawImage, undistortedImage);
-    PositionServiceRecord record;
-    record.rawImage = rawImage;
-    record.undistortedImage = undistortedImage;
-    MovableTimestampedType<PositionServiceRecord> movableTimestampedRecord(record, debugLevel);
-    addRecordToQueue(std::move(movableTimestampedRecord));
-  }
+    cv::Mat rawImage = cv::imread("test/test01.jpg" ,cv::IMREAD_COLOR); // source an image
+    setNewRecord(std::move(rawImage)); // undistort and provide to clients, the main responsibility of the camera driver
 }
 
 void CameraDriver::runInInitializingState(){
@@ -126,11 +167,12 @@ void CameraDriver::runInInitializingState(){
 }
 
 void CameraDriver::runInFreezedState(){
-  printToConsole("CameraDriver::runInFreezedState is called.");
+  printToConsole("CameraDriver::runInFreezedState is called. Blocking changes to attributes now.");
 }
 
 void CameraDriver::runInTerminatedState(){
-  printToConsole("CameraDriver::runInTerminatedState is called.");
+  printToConsole("CameraDriver::runInTerminatedState is called. Record is not longer updated.");
+  newRecordIsCurrent = false;
 }
 
 void CameraDriver::manageStateSwitches(){

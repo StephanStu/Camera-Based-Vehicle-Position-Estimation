@@ -5,7 +5,7 @@
 
 std::mutex RunnableEntity::consoleProtection;
 
-RunnableEntity::RunnableEntity() : sleepForMilliseconds(250), currentState(State::terminated), debugLevel(Debuglevel::none), ready(false) {
+RunnableEntity::RunnableEntity() : sleepForMilliseconds(50), currentState(State::terminated), debugLevel(Debuglevel::none), ready(false) {
 }
 
 RunnableEntity::~RunnableEntity(){
