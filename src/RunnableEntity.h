@@ -21,7 +21,6 @@ class RunnableEntity{
     State getCurrentState(); // returns the current state
     bool isReady(); // return the ready-variable to a requester
   protected:
-    friend class PositionService;
   	void printToConsole(std::string message); // this method prints to console in a thread-safe way
     State currentState; // this variable is the current state of the software component (as defined in the enumerated type)
   	Debuglevel debugLevel; // this variabel is set to "none" or "verbose" to allow messages from methods to be printed or not

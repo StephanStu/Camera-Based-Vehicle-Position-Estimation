@@ -1,47 +1,30 @@
 #include "RecordServer.h"
-#include <string>
 
-void RecordServer::addRecord(MovableTimestampedType<PositionServiceRecord> &&record){
-  std::unique_lock<std::mutex> lock(queueProtection);
-  queue.push_back(std::move(record));
-  lock.unlock();
-  condition.notify_one(); 
-  printToConsole("RecordServer::addRecordToQueue called; ingested a record.");
+RecordServer::RecordServer() : isCurrent(false) {
+  printToConsole("RecordServer::RecordServer called.");
 }
 
-unsigned int RecordServer::getQueueLength(){
-  unsigned int size = queue.size();
-  std::string message = "RecordServer::getQueueOfRecordsLength called, queue holds " + std::to_string(size) + " items.";
-  printToConsole(message);
-  return size;
+void RecordServer::sendRecord(std::promise<MovableTimestampedType<PositionServiceRecord>> &&briefcase){
+  printToConsole("RecordServer::sendRecord called.");
+  std::unique_lock<std::mutex> uniqueLock(protection);
+  condition.wait(uniqueLock, [this] { return !isCurrent; }); 
+  briefcase.set_value(std::move(record));
+  uniqueLock.unlock();
+  condition.notify_one();
+  isCurrent = false;
 }
 
-void RecordServer::clearQueue(){
-  unsigned int size = queue.size();
-  if(size > 0){
-    std::string message = "RecordServer::clearQueue called, popping " + std::to_string(size) + " records.";
-    printToConsole(message);
-    std::unique_lock<std::mutex> lock(queueProtection);
-    while(!queue.empty()){
-      queue.pop_back();
-    }
-    lock.unlock();
-    condition.notify_one(); 
-  } else {
-    std::string message = "RecordServer::clearQueue called but queue does not hold any records.";
-    printToConsole(message);
-  }
+MovableTimestampedType<PositionServiceRecord> RecordServer::getRecord(){
+  printToConsole("RecordServer::getRecord called.");
+  MovableTimestampedType<PositionServiceRecord> value;
+  std::unique_lock<std::mutex> uniqueLock(protection);
+  condition.wait(uniqueLock, [this] { return !isCurrent; }); 
+  value = std::move(record);
+  uniqueLock.unlock();
+  condition.notify_one();
+  isCurrent = false;
+  return value;
 }
 
-void RecordServer::popOneRecord(){
-  printToConsole("RecordServer::popRecord called.");
-  if(getQueueLength() > 0){
-    std::unique_lock<std::mutex> lock(queueProtection);
-    MovableTimestampedType<PositionServiceRecord> movableTimestampedRecord = std::move(queue.back());
-    queue.pop_back();
-    lock.unlock();
-    condition.notify_one();
-  } else {
-    printToConsole("RecordServer::getRecord called but queue was empty: Nothing to pop here.");
-  }
-}
+
+

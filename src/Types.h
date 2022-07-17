@@ -11,6 +11,7 @@ struct PositionServiceRecord{
   cv::Mat undistortedImage;
   cv::Mat birdEyesViewImage;
   cv::Mat binaryBirdEyesViewImage;
+  cv::Mat houghLinesImage;
   float distanceToLeftLane;
   float distanceToRightLane;
   float angle;

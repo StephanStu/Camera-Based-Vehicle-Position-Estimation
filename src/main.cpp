@@ -15,10 +15,11 @@
 
 
 #include "Types.h"
-#include "CameraDriver.h"
-#include "ImageTransformer.h"
+#include "CameraServer.h"
 #include "MovableTimestampedType.h"
-#include "PositionService.h"
+#include "ImageTransformer.h"
+#include "PositionEstimator.h"
+#include "PositionServer.h"
 
 using std::vector;
 using std::cout;
@@ -127,57 +128,59 @@ int testMovableTimestampedType(){
 }
 
 int testCameraDriver(){
-  std::shared_ptr<CameraDriver> accessCameraDriver(new CameraDriver(Debuglevel::verbose));
-  accessCameraDriver->calibrate();
-  if (accessCameraDriver->recordIsCurrent()){
-    std::cout << "# Current." << std::endl;
-  } else {
-    std::cout << "# Not current." << std::endl;
-  }
-  accessCameraDriver->isReady();
-  accessCameraDriver->run();
+  cv::Size myImageSize;
+  PositionServiceRecord record;
+  MovableTimestampedType<PositionServiceRecord> timestampedRecord(record, Debuglevel::verbose);
+  
+  std::shared_ptr<CameraServer> accessCamera(new CameraServer(Debuglevel::verbose));
+  //accessCamera->calibrate();
+  //accessCamera->writeCameraCalibrationDataToFile();
+  accessCamera->getImageSize(myImageSize);
+  accessCamera->readCameraCalibrationDataFromFile();
+  accessCamera->getImageSize(myImageSize);
+  accessCamera->createBlackRecord(timestampedRecord);
+  PositionServiceRecord myRecord = timestampedRecord.getData();
+  cv::namedWindow( "OpenCV Test Program", cv::WINDOW_AUTOSIZE );
+  cv::imshow( "OpenCV Test Program", myRecord.rawImage );
+  cv::waitKey(0);
+  
+  
+  //accessCameraDriver->isReady();
+  //accessCameraDriver->run();
   //MovableTimestampedType<PositionServiceRecord> cmplxObj1 = accessCameraDriver->getRecord(); // stuck, because no image is here
   return 0;
 }
 
-int testPositionService(){
-  PositionServiceRecord record;
-  std::vector<cv::Vec4i> lines; // a vector to store lines of the image, using the cv::Vec4i-Datatype
-  PositionService positionService(Debuglevel::verbose);
-  positionService.initialize();
-  std::this_thread::sleep_for(std::chrono::milliseconds(250));
-  std::cout << "##############################################" << std::endl;
-  positionService.run();
-  std::this_thread::sleep_for(std::chrono::milliseconds(10000));
-  std::cout << "##############################################" << std::endl;
-  positionService.terminate();
-  positionService.getRecord(record);
-  cv::imshow( "Raw Image", record.rawImage);
-  cv::imshow( "Binary Bird Eye's View", record.binaryBirdEyesViewImage);
-  /*
-  threshold: The minimum number of intersections to "*detect*" a line
-  minLineLength: The minimum number of points that can form a line. Lines with less than this number of points are disregarded.
-  maxLineGap: The maximum gap between two points to be considered in the same line.
-  */
-  cv::HoughLinesP(record.binaryBirdEyesViewImage, lines, 1, CV_PI/180, 100, 25, 25);
-  cv::Mat output = cv::Mat::zeros(record.binaryBirdEyesViewImage.size(), CV_8UC3);
-    // Draw lines on the image
-    for (size_t i=0; i<lines.size(); i++) {
-      cv::Vec4i l = lines[i];
-      cv::line(output, cv::Point(l[0], l[1]), cv::Point(l[2], l[3]), cv::Scalar(255, 255, 255), 3, cv::LINE_AA);
-    }
-  cv::imshow( "Result", output);
-  
-  cv::waitKey(0);
+int testImageTransformer(){
+  std::shared_ptr<CameraServer> accessCamera(new CameraServer(Debuglevel::verbose));
+  std::shared_ptr<ImageTransformer> accessImageTransformer(new ImageTransformer(Debuglevel::verbose));
+  accessImageTransformer->mountCameraServer(accessCamera);
   return 0;
 }
+
+int testPositionEstimator(){
+  std::shared_ptr<CameraServer> accessCamera(new CameraServer(Debuglevel::verbose));
+  std::shared_ptr<ImageTransformer> accessImageTransformer(new ImageTransformer(Debuglevel::verbose));
+  std::shared_ptr<PositionEstimator> accessPositionEstimator(new PositionEstimator(Debuglevel::verbose));
+  accessImageTransformer->mountCameraServer(accessCamera);
+  accessPositionEstimator->mountImageTransformer(accessImageTransformer);
+  return 0;
+}
+
+int testPositionServer(){
+  std::unique_ptr<PositionServer> srv(new PositionServer(Debuglevel::verbose));
+  return 0;
+}
+
 
 int main(){
   int flag;
   cv::Mat image = cv::imread("SimpleRunwayTestImage.png" ,cv::IMREAD_COLOR); // sample image to test the transformation.
   cv::VideoCapture cap("testVideo002.mp4"); // sample video to test the video-processing
   //flag = testCameraDriver();
-  flag = testPositionService();
+  //flag = testImageTransformer();
+  //flag = testPositionEstimator();
+  flag = testPositionServer();
   return 0;
 }
 
