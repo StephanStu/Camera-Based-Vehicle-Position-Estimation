@@ -7,7 +7,10 @@ RecordServer::RecordServer() : isCurrent(false) {
 void RecordServer::sendRecord(std::promise<MovableTimestampedType<PositionServiceRecord>> &&briefcase){
   printToConsole("RecordServer::sendRecord called.");
   std::unique_lock<std::mutex> uniqueLock(protection);
-  condition.wait(uniqueLock, [this] { return !isCurrent; }); 
+  while(!isCurrent){
+    printToConsole("RecordServer::sendRecord is waiting for record to be updated.");
+    condition.wait(uniqueLock);
+  }
   briefcase.set_value(std::move(record));
   uniqueLock.unlock();
   condition.notify_one();
@@ -18,7 +21,9 @@ MovableTimestampedType<PositionServiceRecord> RecordServer::getRecord(){
   printToConsole("RecordServer::getRecord called.");
   MovableTimestampedType<PositionServiceRecord> value;
   std::unique_lock<std::mutex> uniqueLock(protection);
-  condition.wait(uniqueLock, [this] { return !isCurrent; }); 
+  while(!isCurrent){
+    condition.wait(uniqueLock);
+  }
   value = std::move(record);
   uniqueLock.unlock();
   condition.notify_one();
@@ -26,5 +31,9 @@ MovableTimestampedType<PositionServiceRecord> RecordServer::getRecord(){
   return value;
 }
 
+void RecordServer::stopService(){
+  printToConsole("RecordServer::stopService called.");
+  condition.notify_all();
+}
 
 

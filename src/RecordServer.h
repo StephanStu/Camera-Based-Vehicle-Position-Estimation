@@ -22,10 +22,12 @@ class RecordServer : public RunnableEntity {
     void sendRecord(std::promise<MovableTimestampedType<PositionServiceRecord>> &&briefcase); // sends the record with a promise-future-instance
     MovableTimestampedType<PositionServiceRecord> getRecord(); // gets the record from the queue via return value; this is useful when testing childs of the RecordServer
   protected:
+    void stopService(); // notifies all to ensure no client is waiting forever to be served with current records
     std::mutex protection; // this mutex protects the record when clients want to access in a simultaneous fashion
     std::condition_variable condition; // condition varibale is needed to notify clients
     MovableTimestampedType<PositionServiceRecord> record; // queue is the implementation for holding the records
     bool isCurrent; // this is true if the record is current and this is false when the record is consumed by a client
+    bool recordUpdated; // this is true if updating the record is finished and then breaks the wait in sending-method and getting-method
 };
 
 #endif

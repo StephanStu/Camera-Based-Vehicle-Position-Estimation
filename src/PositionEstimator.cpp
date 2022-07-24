@@ -29,7 +29,8 @@ void PositionEstimator::manageStateSwitches(){
     }
     if(currentState == running){
       if(ready){
-        printToConsole("PositionEstimator::manageStateSwitches is called: Instance is in state running.");
+        std::string message = "PositionEstimator::manageStateSwitches is called: Instance is in state running with isCurrent = " + std::to_string(isCurrent) + ".";
+        printToConsole(message);
         runInRunningState();
       }else{
         printToConsole("PositionEstimator::manageStateSwitches is called: Instance is not ready & calling the initializing routine.");
@@ -52,22 +53,25 @@ void PositionEstimator::manageStateSwitches(){
 
 void PositionEstimator::runInRunningState(){
   /* get the record from :ImageTransformer */
-  std::promise<MovableTimestampedType<PositionServiceRecord>> prms;
-  std::future<MovableTimestampedType<PositionServiceRecord>> ftr = prms.get_future();
-  std::thread t(&ImageTransformer::sendRecord, accessImageTransformer, std::move(prms));
-  t.join();
-  MovableTimestampedType<PositionServiceRecord> movableTimestampedRecord = std::move(ftr.get());
-  /* apply Hough-Transform and update the estimate of the position */
-  PositionServiceRecord newRecord = movableTimestampedRecord.getData();
-  updatePosition(newRecord);
-  movableTimestampedRecord.setData(newRecord);
-  /* save the updated record in the member variable by "moving" it (in order to keep the timestamp!) */
-  std::unique_lock<std::mutex> uniqueLock(protection);
-  condition.wait(uniqueLock); 
-  record = std::move(movableTimestampedRecord);
-  isCurrent = true;
-  uniqueLock.unlock();
-  condition.notify_one();
+  if(newRecordIsAvailable()){
+    Position position;
+    std::promise<MovableTimestampedType<PositionServiceRecord>> prms;
+    std::future<MovableTimestampedType<PositionServiceRecord>> ftr = prms.get_future();
+    std::thread t(&ImageTransformer::sendRecord, accessImageTransformer, std::move(prms));
+    t.join();
+    MovableTimestampedType<PositionServiceRecord> movableTimestampedRecord = std::move(ftr.get());
+    /* apply Hough-Transform and update the estimate of the position */
+    position = updatePosition(movableTimestampedRecord);
+    /* use movableTimestampedRecord.setData(newRecord) to update the position here */
+    
+    /* save the updated record in the member variable by "moving" it (in order to keep the timestamp!) */
+    std::unique_lock<std::mutex> uniqueLock(protection);
+    record = std::move(movableTimestampedRecord);
+    isCurrent = true;
+    uniqueLock.unlock();
+  }else{
+    printToConsole("PositionEstimator::runInRunningState called: Wainting for :ImageTransformer to update it's record.");
+  }
 }
 
 void PositionEstimator::runInInitializingState(){
@@ -86,7 +90,30 @@ void PositionEstimator::runInTerminatedState(){
   isCurrent = false;
 }
 
-void PositionEstimator::updatePosition(const PositionServiceRecord& newRecord){}
+
+Position PositionEstimator::updatePosition(MovableTimestampedType<PositionServiceRecord>& movableTimestampedRecord){
+  long int age = movableTimestampedRecord.getAge();
+  std::string message = "PositionEstimator::updatePosition: Using a record with an age of " + std::to_string(age) + " milliseconds to compute angle & deviation.";
+  printToConsole(message);
+  std::vector<cv::Vec4i> lines;
+  cv::Mat image = movableTimestampedRecord.getData().binaryBirdEyesViewImage;
+  getHoughLines(image, lines);
+  /* Print the lines found to console if suitable debugLevel is chosen */
+  if(lines.size()>0){
+    std::string message = "PositionEstimator::updatePosition: Found " + std::to_string(lines.size()) + " lines in the current image.";
+    printToConsole(message);
+    for (size_t i=0; i<lines.size(); i++) {
+      cv::Vec4i l = lines[i];
+      std::string message = "PositionEstimator::updatePosition: Line " + std::to_string(i+1) + " is [ " + std::to_string(l[0]) + " " +  std::to_string(l[1]) + " " + std::to_string(l[2]) + " " + std::to_string(l[3]) + " ].";
+      printToConsole(message);
+    }
+  }
+  /* Use age and lines to update the kalman filter and return the current position */
+  Position position;
+  position.angle = 0.0;
+  position.deviation = 0.0;
+  return position;
+}
 
 void PositionEstimator::getHoughLines(const cv::Mat& image, std::vector<cv::Vec4i>& lines){
   printToConsole("PositionEstimator::getHoughLines is called.");
@@ -105,4 +132,8 @@ void PositionEstimator::createHoughLinesImage(const cv::Mat& source, cv::Mat des
       cv::line(destination, cv::Point(l[0], l[1]), cv::Point(l[2], l[3]), cv::Scalar(255, 255, 255), 3, cv::LINE_AA);
     }
   }
+}
+
+bool PositionEstimator::newRecordIsAvailable(){
+  return accessImageTransformer->isCurrent;
 }

@@ -27,8 +27,9 @@ class PositionEstimator : public RecordServer {
     void runInInitializingState(); // this method is called when State = initializing
     void runInFreezedState(); // this method is called when State = freezed
     void runInTerminatedState(); // this method is called when State = terminated
-    void updatePosition(const PositionServiceRecord& newRecord); // this method updates the estimate of the position (member variable)
+    Position updatePosition(MovableTimestampedType<PositionServiceRecord>& movableTimestampedRecord); // this method updates the estimate of the position (member variable)
     std::shared_ptr<ImageTransformer> accessImageTransformer; // shared pointer to an instance of CameraDriver delivering images upond request
+    bool newRecordIsAvailable(); // verifies, that the server has a new record (before requesting to send it)
     bool imageTransformerIsMounted; // this is true once an intance of ImageTransformer has been mounted
     int threshold = 100; // parameter in Hough-Transformation, the minimum number of intersections to "*detect*" a line
     int minLineLength = 25; // parameter in Hough-Transformation, the minimum number of points that can form a line. Lines with less than this number of points are disregarded

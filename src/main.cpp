@@ -169,6 +169,21 @@ int testPositionEstimator(){
 
 int testPositionServer(){
   std::unique_ptr<PositionServer> srv(new PositionServer(Debuglevel::verbose));
+  //srv->runCameraCalibration(true);
+  std::this_thread::sleep_for(std::chrono::milliseconds(50));
+  srv->initialize();
+  std::this_thread::sleep_for(std::chrono::milliseconds(500));
+  srv->run();
+  std::this_thread::sleep_for(std::chrono::milliseconds(10000));
+  //srv->freeze();
+  srv->terminate();
+  std::this_thread::sleep_for(std::chrono::milliseconds(50));
+  srv->initialize();
+  std::this_thread::sleep_for(std::chrono::milliseconds(500));
+  srv->run();
+  std::this_thread::sleep_for(std::chrono::milliseconds(1000));
+  //srv->freeze();
+  srv->terminate();
   return 0;
 }
 

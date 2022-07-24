@@ -29,11 +29,10 @@ PositionServer::PositionServer(Debuglevel positionServerDebuglevel){
 void PositionServer::run(){
   printToConsole("PositionServer::run called. Note: This the the main thread controlling servers & drivers.");
   if(ready){
+    /* fire up services in the right order by imposing a swithc to State::running: Camera, Transformer, Estimator*/
     currentState = State::running;
     accessCameraServer->setCurrentState(currentState);
-    std::this_thread::sleep_for(std::chrono::milliseconds(sleepForMilliseconds));
     accessImageTransformer->setCurrentState(currentState);
-    std::this_thread::sleep_for(std::chrono::milliseconds(sleepForMilliseconds));
     accessPositionEstimator->setCurrentState(currentState);
   } else {
     printToConsole("PositionServer::run called but service is not ready yet.");
@@ -42,9 +41,11 @@ void PositionServer::run(){
 
 void PositionServer::initialize(){
   printToConsole("PositionServer::initialize called. Note: This the the main thread controlling servers & drivers.");
+  accessCameraServer->readCameraCalibrationDataFromFile();
   currentState = State::initializing;
-  accessImageTransformer->setCurrentState(currentState);
+  /* Move services into the initializing state and start the threads */
   accessCameraServer->setCurrentState(currentState);
+  accessImageTransformer->setCurrentState(currentState);
   accessPositionEstimator->setCurrentState(currentState);
   
   //std::async(std::launch::async, &CameraDriver::run, accessCameraDriver); // starting :CameraDriver's thread, per definition this is a call to its "run()".
@@ -52,30 +53,30 @@ void PositionServer::initialize(){
   threads.emplace_back(std::thread(&CameraServer::run, accessCameraServer)); // starting :CameraDriver's thread, per definition this is a call to its "run()".
   threads.emplace_back(std::thread(&ImageTransformer::run, accessImageTransformer));// starting :ImageTransformer's thread, per definition this is a call to its "run()".
   threads.emplace_back(std::thread(&PositionEstimator::run, accessPositionEstimator));// starting :PositionEstimator's thread, per definition this is a call to its "run()".
-  ready = false;
+  ready = ((accessCameraServer->isReady() && accessImageTransformer->isReady()) && accessPositionEstimator->isReady());
   while(!ready){
+     std::this_thread::sleep_for(std::chrono::milliseconds(sleepForMilliseconds));
      printToConsole("PositionServer::initialize called: Waiting for resources to be ready.");
      ready = ((accessCameraServer->isReady() && accessImageTransformer->isReady()) && accessPositionEstimator->isReady());
-     std::this_thread::sleep_for(std::chrono::milliseconds(sleepForMilliseconds));
   }
 }
 
 void PositionServer::terminate(){
+  /* shut down services in the right order by imposing a swithc to State::terminated: Estimator, Transformer, Camera*/
   printToConsole("PositionServer::terminate called. Note: This the the main thread controlling servers & drivers.");
   currentState = State::terminated;
   accessPositionEstimator->setCurrentState(currentState);
-  std::this_thread::sleep_for(std::chrono::milliseconds(sleepForMilliseconds));
   accessImageTransformer->setCurrentState(currentState);
-  std::this_thread::sleep_for(std::chrono::milliseconds(sleepForMilliseconds));
   accessCameraServer->setCurrentState(currentState);
 }
 
 void PositionServer::freeze(){
+  /* stop/freeeze services in the right order by imposing a switch to State::freezed: Estimator, Transformer, Camera*/
   printToConsole("PositionServer::freeze called.");
   currentState = State::freezed;
-  accessCameraServer->setCurrentState(currentState);
-  accessImageTransformer->setCurrentState(currentState);
   accessPositionEstimator->setCurrentState(currentState);
+  accessImageTransformer->setCurrentState(currentState);
+  accessCameraServer->setCurrentState(currentState);
 }
 
 void PositionServer::getRecord(PositionServiceRecord& record){

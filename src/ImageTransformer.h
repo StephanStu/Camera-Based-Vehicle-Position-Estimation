@@ -49,6 +49,7 @@ class ImageTransformer : public RecordServer {
     const int binaryThresholdValue = 90; // value of the grayscale(!) pixels that are converted to maxBinaryValue in the bird eye's image; anything below that value is converted to zero = "black". 
     cv::Mat birdsEyeTransformMatrix; // Matrix for bird's eye perspective transform  
     std::shared_ptr<CameraServer> accessCameraServer; // shared pointer to an instance of CameraDriver delivering images upond request
+    bool newRecordIsAvailable(); // verifies, that the server has a new record (before requesting to send it)
     bool cameraServerIsMounted; // this is true once an instance of CameraDriver has been mounted
     bool birdsEyeTransformationMatrixIsReady; // this is true once the bird eye's transformation matrix has been calculated
 };

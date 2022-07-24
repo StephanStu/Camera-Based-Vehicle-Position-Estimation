@@ -145,7 +145,8 @@ void CameraServer::manageStateSwitches(){
     }
     if(currentState == running){
       if(ready){
-        printToConsole("CameraServer::manageStateSwitches is called: Instance is in state running.");
+        std::string message = "CameraServer::manageStateSwitches is called: Instance is in state running with isCurrent = " + std::to_string(isCurrent) + ".";
+        printToConsole(message);
         runInRunningState();
       }else{
         printToConsole("CameraServer::manageStateSwitches is called: Instance is not ready & calling the initializing routine.");
@@ -173,13 +174,11 @@ void CameraServer::runInRunningState(){
   PositionServiceRecord newRecord;
   newRecord.rawImage = std::move(rawImage);
   newRecord.undistortedImage = std::move(undistortedImage);
-  MovableTimestampedType<PositionServiceRecord> newMovableTimestampedRecord(newRecord, debugLevel);
+  MovableTimestampedType<PositionServiceRecord> newMovableTimestampedRecord(newRecord, Debuglevel::none);
   std::unique_lock<std::mutex> uniqueLock(protection);
-  condition.wait(uniqueLock); 
   record = std::move(newMovableTimestampedRecord);
   isCurrent = true;
   uniqueLock.unlock();
-  condition.notify_one();
 }
     
 void CameraServer::runInInitializingState(){
@@ -189,28 +188,21 @@ void CameraServer::runInInitializingState(){
     printToConsole("CameraServer::runInInitializingState is called but instance is not ready yet.");
   }else{
     PositionServiceRecord newRecord;
-    MovableTimestampedType<PositionServiceRecord> newMovableTimestampedRecord(newRecord, debugLevel);
+    MovableTimestampedType<PositionServiceRecord> newMovableTimestampedRecord(newRecord, Debuglevel::none);
     createBlackRecord(newMovableTimestampedRecord);
     std::unique_lock<std::mutex> uniqueLock(protection);
-    condition.wait(uniqueLock); 
     record = std::move(newMovableTimestampedRecord);
     uniqueLock.unlock();
-    condition.notify_one();
   }
 }
     
 void CameraServer::runInFreezedState(){
   isCurrent = false;
+  //cv::namedWindow( "Undistorted image from :CameraServer", cv::WINDOW_AUTOSIZE);
+  //cv::imshow( "Undistorted image from :CameraServer", record.getData().undistortedImage);
+  //cv::waitKey(0);
 }
     
 void CameraServer::runInTerminatedState(){
   isCurrent = false;
-  PositionServiceRecord newRecord;
-  MovableTimestampedType<PositionServiceRecord> newMovableTimestampedRecord(newRecord, debugLevel);
-  createBlackRecord(newMovableTimestampedRecord);
-  std::unique_lock<std::mutex> uniqueLock(protection);
-  condition.wait(uniqueLock); 
-  record = std::move(newMovableTimestampedRecord);
-  uniqueLock.unlock();
-  condition.notify_one();
 }

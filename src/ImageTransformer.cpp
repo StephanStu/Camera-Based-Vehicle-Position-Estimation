@@ -29,7 +29,8 @@ void ImageTransformer::manageStateSwitches(){
     }
     if(currentState == running){
       if(ready){
-        printToConsole("ImageTransformer::manageStateSwitches is called: Instance is in state running.");
+        std::string message = "ImageTransformer::manageStateSwitches is called: Instance is in state running with isCurrent = " + std::to_string(isCurrent) + ".";
+        printToConsole(message);
         runInRunningState();
       }else{
         printToConsole("ImageTransformer::manageStateSwitches is called: Instance is not ready & calling the initializing routine.");
@@ -52,22 +53,24 @@ void ImageTransformer::manageStateSwitches(){
 
 void ImageTransformer::runInRunningState(){
   /* get the record from :CameraServer */
-  std::promise<MovableTimestampedType<PositionServiceRecord>> prms;
-  std::future<MovableTimestampedType<PositionServiceRecord>> ftr = prms.get_future();
-  std::thread t(&CameraServer::sendRecord, accessCameraServer, std::move(prms));
-  t.join();
-  MovableTimestampedType<PositionServiceRecord> movableTimestampedRecord = std::move(ftr.get());
-  /* process images and update the record */
-  PositionServiceRecord newRecord = movableTimestampedRecord.getData();
-  applyImageTransformations(newRecord);
-  movableTimestampedRecord.setData(newRecord);
-  /* save the updated record in the member variable by "moving" it (in order to keep the timestamp!) */
-  std::unique_lock<std::mutex> uniqueLock(protection);
-  condition.wait(uniqueLock); 
-  record = std::move(movableTimestampedRecord);
-  isCurrent = true;
-  uniqueLock.unlock();
-  condition.notify_one();
+  if(newRecordIsAvailable()){
+    std::promise<MovableTimestampedType<PositionServiceRecord>> prms;
+    std::future<MovableTimestampedType<PositionServiceRecord>> ftr = prms.get_future();
+    std::thread t(&CameraServer::sendRecord, accessCameraServer, std::move(prms));
+    t.join();
+    MovableTimestampedType<PositionServiceRecord> movableTimestampedRecord = std::move(ftr.get());
+    /* process images and update the record */
+    PositionServiceRecord newRecord = movableTimestampedRecord.getData();
+    applyImageTransformations(newRecord);
+    movableTimestampedRecord.setData(newRecord);
+    /* save the updated record in the member variable by "moving" it (in order to keep the timestamp!) */
+    std::unique_lock<std::mutex> uniqueLock(protection);
+    record = std::move(movableTimestampedRecord);
+    isCurrent = true;
+    uniqueLock.unlock();
+  }else{
+    printToConsole("ImageTransformer::runInRunningState called: Wainting for :CameraServer to update it's record.");
+  }
 }
 
 void ImageTransformer::runInInitializingState(){
@@ -86,6 +89,9 @@ void ImageTransformer::runInInitializingState(){
 
 void ImageTransformer::runInFreezedState(){
   isCurrent = false;
+  //cv::namedWindow( "Bird eye's view image from :ImageTransformer", cv::WINDOW_AUTOSIZE);
+  //cv::imshow( "Bird eye's view image from :ImageTransformer", record.getData().birdEyesViewImage);
+  //cv::waitKey(0);
 }
 
 void ImageTransformer::runInTerminatedState(){
@@ -159,4 +165,8 @@ void ImageTransformer::applyImageTransformations(PositionServiceRecord& record){
   detectEdges(binaryBirdEyesViewImage, binaryEdgesDetcted);
   record.birdEyesViewImage = birdEyesViewImage;
   record.binaryBirdEyesViewImage = binaryEdgesDetcted;
+}
+
+bool ImageTransformer::newRecordIsAvailable(){
+  return accessCameraServer->isCurrent;
 }
