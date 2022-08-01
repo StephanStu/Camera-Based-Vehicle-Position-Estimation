@@ -27,7 +27,7 @@ using std::cerr;
 using std::endl;
 using std::string;
 
-#define PI 3.1415926
+#define PI 3.14159265
 
 int runHoughTransformationTest(cv::Mat image){
   cv::Mat grayImage; // used for the result of transfroming the RGB-Image to a grayscale-image
@@ -174,7 +174,7 @@ int testPositionServer(){
   srv->initialize();
   std::this_thread::sleep_for(std::chrono::milliseconds(500));
   srv->run();
-  std::this_thread::sleep_for(std::chrono::milliseconds(10000));
+  std::this_thread::sleep_for(std::chrono::milliseconds(2000));
   //srv->freeze();
   srv->terminate();
   std::this_thread::sleep_for(std::chrono::milliseconds(50));
@@ -187,6 +187,212 @@ int testPositionServer(){
   return 0;
 }
 
+void showImage(cv::Mat img){
+  int delay = 0;
+  cv::imshow("Your Image", img);
+  cv::waitKey(delay);
+}
+
+cv::Mat mergeImages(const cv::Mat& src1, const cv::Mat& src2){
+  int rows = cv::max(src1.rows, src2.rows);
+  int cols = src1.cols + src2.cols;
+  cv::Mat dest = cv::Mat::zeros(cv::Size(cols, rows), CV_8UC3);  
+  std::vector<cv::Mat> imgs_for_concat_0 = {src1, src2};
+  int start_col = 0;
+  int start_row = 0;
+  int curr_cols;
+  int curr_rows;
+  for (size_t i=0; i < imgs_for_concat_0.size(); ++i){
+    curr_cols = imgs_for_concat_0[i].cols;
+    curr_rows = imgs_for_concat_0[i].rows;
+    imgs_for_concat_0[i].copyTo(dest(cv::Rect(start_col, start_row, curr_cols, curr_rows)));
+    start_col += curr_cols;
+  }
+  return dest;
+}
+
+bool isVertical( cv::Vec4i line){
+  if(line[0] == line[2]){
+    std::cout << "Found a vertical line." << std::endl;
+    return true;
+  }else{
+    return false;
+  }
+}
+
+bool findRightLaneLineInHoughLines(const std::vector<cv::Vec4i>& houghLines, cv::Vec4i& laneLine){
+  int centerLineXCoordinate = 250;
+  int yMax = 600; // bottom of the image
+  int xMax = 500; // width of the image
+  int closestToCenterXCoordinate = xMax;
+  float slope;
+  float angle;
+  float slopeLowerBound; // bound for slope of lane line in x-y-coordintes of cv::Mat-Image; lane lines must be very steep - have large m - otherwise they are not lane lines but artifacts 
+  float y0; // this is the value in the linear form y = y0 + slope * x; equation represnts a lane line
+  float xStar; // the x value where the linear form hits the yMax (the bottom of the image)
+  bool success = false;
+  for (size_t i=0; i<houghLines.size(); i++) {
+    cv::Vec4i line = houghLines[i];
+    if(isVertical(line)){
+      if((line[0] > centerLineXCoordinate) && (line[0] < closestToCenterXCoordinate)){
+        closestToCenterXCoordinate = line[0];
+        laneLine[0] = line[0];
+        laneLine[2] = line[2];
+        laneLine[1] = yMax;
+        laneLine[3] = 0;
+        success = true;
+        angle = 90.0 * PI / 180.0;
+        std::cout << "Detected straight right lane line." << std::endl;
+        std::cout << "Updated closest to be equal to be " << closestToCenterXCoordinate << std::endl;
+      }
+    }else{
+      slope = (line[3]-line[1]) / (line[2]-line[0]);
+      y0 = line[1] - (slope * line[0]);
+      xStar = (yMax - y0) / slope;
+      if((int(xStar) > centerLineXCoordinate) && (int(xStar) < closestToCenterXCoordinate)){
+        closestToCenterXCoordinate = int(xStar);
+        laneLine[0] = int(xStar);
+        laneLine[1] = yMax;
+        laneLine[3] = 0;
+        laneLine[2] = int(-y0 / slope);
+        success = true;
+        angle = atan(yMax/(laneLine[2] - laneLine[0]));
+        std::cout << "Detected right lane line with slope " << slope << " and offset " << y0 << " and angle " << angle * 180.0/PI <<  std::endl;
+        std::cout << "Updated closest to be equal to be " << closestToCenterXCoordinate << std::endl;
+      }
+    }
+  }
+  return success;
+}
+
+bool findLeftLaneLineInHoughLines(const std::vector<cv::Vec4i>& houghLines, cv::Vec4i& laneLine){
+  int closestToCenterXCoordinate = 0;
+  int centerLineXCoordinate = 250;
+  int yMax = 600; // bottom of the image
+  int xMax = 500; // width of the image
+  float slope;
+  float angle;
+  float slopeLowerBound; // bound for slope of lane line in x-y-coordintes of cv::Mat-Image; lane lines must be very steep - have large m - otherwise they are not lane lines but artifacts 
+  float y0; // this is the value in the linear form y = y0 + slope * x; equation represnts a lane line
+  float xStar; // the x value where the linear form hits the yMax (the bottom of the image)
+  bool success = false;
+  for (size_t i=0; i<houghLines.size(); i++) {
+    cv::Vec4i line = houghLines[i];
+    if(isVertical(line)){
+      if((line[0] < centerLineXCoordinate) && (line[0] > closestToCenterXCoordinate)){
+        closestToCenterXCoordinate = line[0];
+        laneLine[0] = line[0];
+        laneLine[2] = line[2];
+        laneLine[1] = yMax;
+        laneLine[3] = 0;
+        success = true;
+        angle = 90.0 * PI / 180.0;
+        std::cout << "Detected straight left lane line. " << std::endl;
+        std::cout << "Updated closest to be equal to be " << closestToCenterXCoordinate << std::endl;
+      }
+    }else{
+      slope = (line[3]-line[1]) / (line[2]-line[0]);
+      y0 = line[1] - (slope * line[0]);
+      xStar = (yMax - y0) / slope;
+      if((int(xStar) < centerLineXCoordinate) && (int(xStar) > closestToCenterXCoordinate)){
+        closestToCenterXCoordinate = int(xStar);
+        laneLine[0] = int(xStar);
+        laneLine[1] = yMax;
+        laneLine[3] = 0;
+        laneLine[2] = int(-y0 / slope);
+        success = true;
+        angle = atan(yMax/(laneLine[2] - laneLine[0]));
+        std::cout << "Detected left lane line with slope " << slope << " and offset " << y0 << " and angle " << angle * 180.0/PI << std::endl;
+        std::cout << "Updated closest to be equal to be " << closestToCenterXCoordinate << std::endl;
+      }
+    }
+  }
+  return success;
+}
+
+int testLanePositionSensing(){
+  /* resource initialization*/
+  std::shared_ptr<CameraServer> accessCamera(new CameraServer(Debuglevel::verbose));
+  accessCamera->readCameraCalibrationDataFromFile();
+  std::shared_ptr<ImageTransformer> accessTransformer(new ImageTransformer(Debuglevel::verbose));
+  accessTransformer->setBirdEyesTransformMatrix();
+  std::shared_ptr<PositionEstimator> accessEstimator(new PositionEstimator(Debuglevel::verbose));
+  /* laod test image & create empty images to hold results */
+  cv::Mat undistortedImage;
+  cv::Mat gaussianBlurredImage;
+  cv::Mat grayImage;
+  cv::Mat birdEyesViewImage;
+  cv::Mat binaryBirdEyesViewImage;
+  cv::Mat binaryEdgesDetected;
+  cv::Mat result;
+  cv::Mat rawImage = cv::imread("test/test05.jpg" , cv::IMREAD_COLOR);
+  /* camera driver's operations are here */
+  accessCamera->undistortImage(rawImage, undistortedImage);
+  /* image transformer's operations are here */
+  accessTransformer->applyGausianBlurr(undistortedImage , gaussianBlurredImage);
+  accessTransformer->convertToGrayImage(gaussianBlurredImage, grayImage);
+  accessTransformer->convertToBirdEyesView(grayImage, birdEyesViewImage);
+  accessTransformer->convertToBinaryImage(birdEyesViewImage, binaryBirdEyesViewImage);
+  accessTransformer->detectEdges(binaryBirdEyesViewImage, binaryEdgesDetected);
+  /* position estimator's operations are here */
+  std::vector<cv::Vec4i> lines;
+  accessEstimator->getHoughLines(binaryEdgesDetected, lines);
+  /* show the result */
+  
+  result = cv::Mat::zeros(binaryEdgesDetected.size(), CV_8UC3);
+  if(lines.size()>0){
+    for (size_t i=0; i<lines.size(); i++) {
+    //for (size_t i=0; i<1; i++) {  
+      cv::Vec4i l = lines[i];
+      cv::line(result, cv::Point(l[0], l[1]), cv::Point(l[2], l[3]), cv::Scalar(255, 255, 255), 3, cv::LINE_AA);
+      std::cout << "Adding a line with points: [ " << l[0] << " , " << l[1] << " ] to [ " << l[2] << " , " << l[3] << " ]" << std::endl;
+    }
+  }
+  /* compute the "sensor readings": distances and angles */
+  /* find the line that is closest to center but left of center = x < 250 */
+  cv::Vec4i leftLaneLine;
+  bool leftLaneDetected;
+  cv::Vec4i rightLaneLine;
+  bool rightLaneDetected;
+  rightLaneDetected = findRightLaneLineInHoughLines(lines, rightLaneLine);
+  leftLaneDetected = findLeftLaneLineInHoughLines(lines, leftLaneLine);
+  if(leftLaneDetected){
+    std::cout << "Left Lane detected: [ " << leftLaneLine[0] << " , " << leftLaneLine[1] << " ] to [ " << leftLaneLine[2] << " , " << leftLaneLine[3] << " ]" << std::endl;
+    cv::line(result, cv::Point(leftLaneLine[0], leftLaneLine[1]), cv::Point(leftLaneLine[2], leftLaneLine[3]), cv::Scalar(0, 255, 255), 3, cv::LINE_AA);
+  }else{
+    std::cout<<"Did not find a left lane line."<<std::endl;
+  }
+  if(rightLaneDetected){
+    std::cout << "Right Lane detected: [ " << rightLaneLine[0] << " , " << rightLaneLine[1] << " ] to [ " << rightLaneLine[2] << " , " << rightLaneLine[3] << " ]" << std::endl;
+    cv::line(result, cv::Point(rightLaneLine[0], rightLaneLine[1]), cv::Point(rightLaneLine[2], rightLaneLine[3]), cv::Scalar(0, 255, 255), 3, cv::LINE_AA);
+  }else{
+    std::cout<<"Did not find a right lane line."<<std::endl;
+  }
+  
+  
+  cv::Size mat_size(500,600);
+  cv::Mat blue(mat_size, CV_8UC3, cv::Scalar(255,0,0));
+  cv::Mat green(mat_size, CV_8UC3, cv::Scalar(0,255,0));
+  
+  //cv::Mat birdEyesViewAndLaneLines = mergeImages(birdEyesViewImage, result);
+  
+  /* find the line that is closest to center but right of center = x > 250 */
+  
+  //int rows = cv::max(rawImage.rows, binaryEdgesDetcted.rows);
+  //int cols = rawImage.cols + binaryEdgesDetcted.cols;
+  //cv::Mat result(rows, cols,  CV_8UC3);
+  //rawImage.copyTo(result(cv::Rect(0, 0, rawImage.cols, rawImage.rows)));
+  //binaryEdgesDetcted.copyTo(result(cv::Rect(rawImage.cols, 0, binaryEdgesDetcted.cols, binaryEdgesDetcted.rows)));
+  showImage(result);
+  
+  //int rows = cv::max(birdEyesViewImage.rows, binaryEdgesDetected.rows);
+  //int cols = birdEyesViewImage.cols + binaryEdgesDetected.cols;
+  //cv::Mat merged = cv::Mat::zeros(cv::Size(cols, rows), CV_8UC3);
+  
+  return 0;
+}
+
+
 
 int main(){
   int flag;
@@ -195,7 +401,8 @@ int main(){
   //flag = testCameraDriver();
   //flag = testImageTransformer();
   //flag = testPositionEstimator();
-  flag = testPositionServer();
+  //flag = testPositionServer();
+  flag = testLanePositionSensing();
   return 0;
 }
 

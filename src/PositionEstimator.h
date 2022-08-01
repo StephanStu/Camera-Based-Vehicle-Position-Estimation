@@ -31,9 +31,9 @@ class PositionEstimator : public RecordServer {
     std::shared_ptr<ImageTransformer> accessImageTransformer; // shared pointer to an instance of CameraDriver delivering images upond request
     bool newRecordIsAvailable(); // verifies, that the server has a new record (before requesting to send it)
     bool imageTransformerIsMounted; // this is true once an intance of ImageTransformer has been mounted
-    int threshold = 100; // parameter in Hough-Transformation, the minimum number of intersections to "*detect*" a line
-    int minLineLength = 25; // parameter in Hough-Transformation, the minimum number of points that can form a line. Lines with less than this number of points are disregarded
-    int maxLineGap = 25; // parameter in Hough-Transformation, the maximum gap between two points to be considered in the same line
+    int threshold = 150; // parameter in Hough-Transformation, the minimum number of intersections to "*detect*" a line
+    int minLineLength = 50; // parameter in Hough-Transformation, the minimum number of points that can form a line. Lines with less than this number of points are disregarded
+    int maxLineGap = 50; // parameter in Hough-Transformation, the maximum gap between two points to be considered in the same line
 };
 
 #endif

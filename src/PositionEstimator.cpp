@@ -1,5 +1,7 @@
 #include "PositionEstimator.h"
 
+#define PI 3.14159265
+
 PositionEstimator::PositionEstimator() : imageTransformerIsMounted(false) {
   debugLevel = Debuglevel::none;
 }

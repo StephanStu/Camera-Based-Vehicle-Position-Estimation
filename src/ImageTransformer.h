@@ -18,6 +18,12 @@ class ImageTransformer : public RecordServer {
     // other
     void run(); // realization of virtual function defined in Runnable Entity
     void mountCameraServer(std::shared_ptr<CameraServer> pointerToCameraServer); // "mounts" the instance of CameraServer to the instance of ImageTransformer by saving the shared pointer in the member variables
+    void convertToBinaryImage(cv::Mat& source, cv::Mat& destination); // convert the gray(!) source image to a binary image (= total black everything below a threshold and totla white anything above threshold)
+    void convertToBirdEyesView(cv::Mat& source, cv::Mat& destination); // compute the bird eye's view of the source image
+    void convertToGrayImage(cv::Mat& source, cv::Mat& destination); // convert source image to a gray image
+    void detectEdges(cv::Mat& source, cv::Mat& destination); // detect edges in source image 
+    void applyGausianBlurr(cv::Mat& source, cv::Mat& destination); // apply a Gaussian Noise kernel to the source image
+    void setBirdEyesTransformMatrix(); // compute the bird eye's transformation Matrix mapping the original image into the 'bird eye's view'.
   private:
     friend class PositionServer;
     friend class PositionEstimator;
@@ -27,12 +33,6 @@ class ImageTransformer : public RecordServer {
     void runInFreezedState(); // this method is called when State = freezed; it prevents data from being changed while being freezed
     void runInTerminatedState(); // this method is called when State = terminated
     void applyImageTransformations(PositionServiceRecord& record); // applies the image transformations in the correct order: convert to gray, convert to binary,...
-    void convertToBinaryImage(cv::Mat& source, cv::Mat& destination); // convert the gray(!) source image to a binary image (= total black everything below a threshold and totla white anything above threshold)
-    void convertToBirdEyesView(cv::Mat& source, cv::Mat& destination); // compute the bird eye's view of the source image
-    void convertToGrayImage(cv::Mat& source, cv::Mat& destination); // convert source image to a gray image
-    void detectEdges(cv::Mat& source, cv::Mat& destination); // detect edges in source image 
-    void applyGausianBlurr(cv::Mat& source, cv::Mat& destination); // apply a Gaussian Noise kernel to the source image
-    void setBirdEyesTransformMatrix(); // compute the bird eye's transformation Matrix mapping the original image into the 'bird eye's view'.
     const int queueBufferSize = 2; // default = 2, determines how much records are kept in the queue before they are popped without processing the images 
     const int kernelsize = 5; // default = 5, determines degree of blurring in gausian blur method
     const int birdsEyeImageWidth = 500; // default = 500 (taken from GitHub), width of bird's eye image (after running the transform)
