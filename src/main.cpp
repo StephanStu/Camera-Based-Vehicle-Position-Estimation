@@ -213,20 +213,24 @@ cv::Mat mergeImages(const cv::Mat& src1, const cv::Mat& src2){
 
 bool isVertical( cv::Vec4i line){
   if(line[0] == line[2]){
-    std::cout << "Found a vertical line." << std::endl;
+    //std::cout << "Found a vertical line." << std::endl;
     return true;
   }else{
     return false;
   }
 }
 
-bool findRightLaneLineInHoughLines(const std::vector<cv::Vec4i>& houghLines, cv::Vec4i& laneLine){
+bool findRightLaneLineInHoughLines(const std::vector<cv::Vec4i>& houghLines, cv::Vec4i& laneLine, float& deviation, float& angle){
+  float laneWidth = 3.6576; // width of lane in metres
+  float metresPerPixel = 0.02147443; // in x-direction of the image coordinates: How many metres per pixel?
+  float lowerAngleThreshold = - 15.0 * PI / 180; // lower bound for a reasonable road vehicle angle crusing on highway
+  float upperAngleThreshold = 15.0 * PI / 180; // lower bound for a reasonable road vehicle angle crusing on highway
+  float deviationThreshold = 0.9144; // threshold for deviation from center line, quarter of road width
   int centerLineXCoordinate = 250;
   int yMax = 600; // bottom of the image
   int xMax = 500; // width of the image
   int closestToCenterXCoordinate = xMax;
   float slope;
-  float angle;
   float slopeLowerBound; // bound for slope of lane line in x-y-coordintes of cv::Mat-Image; lane lines must be very steep - have large m - otherwise they are not lane lines but artifacts 
   float y0; // this is the value in the linear form y = y0 + slope * x; equation represnts a lane line
   float xStar; // the x value where the linear form hits the yMax (the bottom of the image)
@@ -240,10 +244,21 @@ bool findRightLaneLineInHoughLines(const std::vector<cv::Vec4i>& houghLines, cv:
         laneLine[2] = line[2];
         laneLine[1] = yMax;
         laneLine[3] = 0;
-        success = true;
-        angle = 90.0 * PI / 180.0;
-        std::cout << "Detected straight right lane line." << std::endl;
-        std::cout << "Updated closest to be equal to be " << closestToCenterXCoordinate << std::endl;
+        angle = 0.0;
+        deviation = (laneWidth / 2) - ((line[0] - centerLineXCoordinate) * metresPerPixel);
+        /* 
+           static check if measurements are within their bounds; otherwise
+           the image processing is corrupted with artifacts or lines are not
+           interpreted in the way the should, e.g. fences are mistaken as 
+           lane lines. Way of checking is
+           
+           -deviationThreshold < deviation < deviationThreshold
+           
+           -lowerAngleThreshold < angle < upperAngleThreshold
+        */
+        if(abs(deviation) < deviationThreshold){
+          success = true;
+        }
       }
     }else{
       slope = (line[3]-line[1]) / (line[2]-line[0]);
@@ -255,23 +270,52 @@ bool findRightLaneLineInHoughLines(const std::vector<cv::Vec4i>& houghLines, cv:
         laneLine[1] = yMax;
         laneLine[3] = 0;
         laneLine[2] = int(-y0 / slope);
-        success = true;
         angle = atan(yMax/(laneLine[2] - laneLine[0]));
-        std::cout << "Detected right lane line with slope " << slope << " and offset " << y0 << " and angle " << angle * 180.0/PI <<  std::endl;
-        std::cout << "Updated closest to be equal to be " << closestToCenterXCoordinate << std::endl;
+        if(angle < 0){
+          angle = 0.0 - angle;
+          deviation = (laneWidth / 2) - ((line[0] - centerLineXCoordinate) * sin(angle) * metresPerPixel);
+          angle = angle - (90.0 * PI / 180.0);
+        }else{
+          deviation = (laneWidth / 2) - ((line[0] - centerLineXCoordinate) * sin(angle) * metresPerPixel);
+          angle = (90.0 * PI / 180.0) - angle;
+        }
+        /* 
+           static check if measurements are within their bounds; otherwise
+           the image processing is corrupted with artifacts or lines are not
+           interpreted in the way the should, e.g. fences are mistaken as 
+           lane lines. Way of checking is
+           
+           -deviationThreshold < deviation < deviationThreshold
+           
+           -lowerAngleThreshold < angle < upperAngleThreshold
+        */
+        if((angle > lowerAngleThreshold) && (angle < upperAngleThreshold)){
+          if(abs(deviation) < deviationThreshold){
+            success = true;
+          }
+        }
+        //std::cout << "Detected right lane line with slope " << slope << " and offset " << y0 << " and angle " << angle * 180.0/PI <<  std::endl;
+        //std::cout << "Updated closest to be equal to be " << closestToCenterXCoordinate << std::endl;
       }
     }
+  }
+  if(success){
+    std::cout << "Detected right lane line with slope = " << slope << " and offset = " << y0 << ". Hence angle = " << angle * 180.0/PI << " deg and distance to center lane = " << deviation * 100 << " cm" << std::endl;
   }
   return success;
 }
 
-bool findLeftLaneLineInHoughLines(const std::vector<cv::Vec4i>& houghLines, cv::Vec4i& laneLine){
+bool findLeftLaneLineInHoughLines(const std::vector<cv::Vec4i>& houghLines, cv::Vec4i& laneLine, float& deviation, float& angle){
+  float laneWidth = 3.6576; // width of lane in metres
+  float metresPerPixel = 0.0213895; // in x-direction of the image coordinates: How many metres per pixel? Taken from test02.jpg
+  float lowerAngleThreshold = - 15.0 * PI / 180; // lower bound for a reasonable road vehicle angle crusing on highway
+  float upperAngleThreshold = 15.0 * PI / 180; // lower bound for a reasonable road vehicle angle crusing on highway
+  float deviationThreshold = 0.9144; // threshold for deviation from center line, quarter of road width
   int closestToCenterXCoordinate = 0;
   int centerLineXCoordinate = 250;
   int yMax = 600; // bottom of the image
   int xMax = 500; // width of the image
   float slope;
-  float angle;
   float slopeLowerBound; // bound for slope of lane line in x-y-coordintes of cv::Mat-Image; lane lines must be very steep - have large m - otherwise they are not lane lines but artifacts 
   float y0; // this is the value in the linear form y = y0 + slope * x; equation represnts a lane line
   float xStar; // the x value where the linear form hits the yMax (the bottom of the image)
@@ -285,10 +329,21 @@ bool findLeftLaneLineInHoughLines(const std::vector<cv::Vec4i>& houghLines, cv::
         laneLine[2] = line[2];
         laneLine[1] = yMax;
         laneLine[3] = 0;
-        success = true;
-        angle = 90.0 * PI / 180.0;
-        std::cout << "Detected straight left lane line. " << std::endl;
-        std::cout << "Updated closest to be equal to be " << closestToCenterXCoordinate << std::endl;
+        angle = 0.0;
+        deviation = ((centerLineXCoordinate - line[0]) * metresPerPixel) - (laneWidth / 2);
+        /* 
+           static check if measurements are within their bounds; otherwise
+           the image processing is corrupted with artifacts or lines are not
+           interpreted in the way the should, e.g. fences are mistaken as 
+           lane lines. Way of checking is
+           
+           -deviationThreshold < deviation < deviationThreshold
+           
+           -lowerAngleThreshold < angle < upperAngleThreshold
+        */
+        if(abs(deviation) < deviationThreshold){
+          success = true;
+        }
       }
     }else{
       slope = (line[3]-line[1]) / (line[2]-line[0]);
@@ -300,12 +355,37 @@ bool findLeftLaneLineInHoughLines(const std::vector<cv::Vec4i>& houghLines, cv::
         laneLine[1] = yMax;
         laneLine[3] = 0;
         laneLine[2] = int(-y0 / slope);
-        success = true;
         angle = atan(yMax/(laneLine[2] - laneLine[0]));
-        std::cout << "Detected left lane line with slope " << slope << " and offset " << y0 << " and angle " << angle * 180.0/PI << std::endl;
-        std::cout << "Updated closest to be equal to be " << closestToCenterXCoordinate << std::endl;
+        if(angle < 0){
+          angle = 0.0 - angle;
+          deviation = ((centerLineXCoordinate - line[0]) * sin(angle) *  metresPerPixel) - (laneWidth / 2);
+          angle = angle - (90.0 * PI / 180.0);
+        }else{
+          deviation = ((centerLineXCoordinate - line[0]) * sin(angle) *  metresPerPixel) - (laneWidth / 2);
+          angle = (90.0 * PI / 180.0) - angle;
+        }
+        /* 
+           static check if measurements are within their bounds; otherwise
+           the image processing is corrupted with artifacts or lines are not
+           interpreted in the way the should, e.g. fences are mistaken as 
+           lane lines. Way of checking is
+           
+           -deviationThreshold < deviation < deviationThreshold
+           
+           -lowerAngleThreshold < angle < upperAngleThreshold
+        */
+        if((angle > lowerAngleThreshold) && (angle < upperAngleThreshold)){
+          if(abs(deviation) < deviationThreshold){
+            success = true;
+          }
+        }
+        //std::cout << "Detected left lane line with slope " << slope << " and offset " << y0 << " and angle " << angle * 180.0/PI << std::endl;
+        //std::cout << "Updated closest to be equal to be " << closestToCenterXCoordinate << std::endl;
       }
     }
+  }
+  if(success){
+    std::cout << "Detected left lane line with slope = " << slope << " and offset = " << y0 << ". Hence angle = " << angle * 180.0/PI << " deg and distance to center lane = " << deviation * 100 << " cm" << std::endl;
   }
   return success;
 }
@@ -350,12 +430,19 @@ int testLanePositionSensing(){
   }
   /* compute the "sensor readings": distances and angles */
   /* find the line that is closest to center but left of center = x < 250 */
+  float rightDeviation;
+  float leftDeviation;
+  float leftAngle;
+  float rightAngle;
   cv::Vec4i leftLaneLine;
   bool leftLaneDetected;
   cv::Vec4i rightLaneLine;
   bool rightLaneDetected;
-  rightLaneDetected = findRightLaneLineInHoughLines(lines, rightLaneLine);
-  leftLaneDetected = findLeftLaneLineInHoughLines(lines, leftLaneLine);
+  
+  result = birdEyesViewImage;
+  
+  rightLaneDetected = findRightLaneLineInHoughLines(lines, rightLaneLine, leftDeviation, leftAngle);
+  leftLaneDetected = findLeftLaneLineInHoughLines(lines, leftLaneLine, rightDeviation, rightAngle);
   if(leftLaneDetected){
     std::cout << "Left Lane detected: [ " << leftLaneLine[0] << " , " << leftLaneLine[1] << " ] to [ " << leftLaneLine[2] << " , " << leftLaneLine[3] << " ]" << std::endl;
     cv::line(result, cv::Point(leftLaneLine[0], leftLaneLine[1]), cv::Point(leftLaneLine[2], leftLaneLine[3]), cv::Scalar(0, 255, 255), 3, cv::LINE_AA);
