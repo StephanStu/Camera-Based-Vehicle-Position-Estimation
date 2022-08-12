@@ -12,6 +12,7 @@
 #include <algorithm>  // std::for_each
 #include <memory>
 #include <ctime>
+#include <eigen3/Eigen/Core>
 
 
 #include "Types.h"
@@ -405,7 +406,7 @@ int testLanePositionSensing(){
   cv::Mat binaryBirdEyesViewImage;
   cv::Mat binaryEdgesDetected;
   cv::Mat result;
-  cv::Mat rawImage = cv::imread("test/test05.jpg" , cv::IMREAD_COLOR);
+  cv::Mat rawImage = cv::imread("test/test01.jpg" , cv::IMREAD_COLOR);
   /* camera driver's operations are here */
   accessCamera->undistortImage(rawImage, undistortedImage);
   /* image transformer's operations are here */
@@ -417,19 +418,6 @@ int testLanePositionSensing(){
   /* position estimator's operations are here */
   std::vector<cv::Vec4i> lines;
   accessEstimator->getHoughLines(binaryEdgesDetected, lines);
-  /* show the result */
-  
-  result = cv::Mat::zeros(binaryEdgesDetected.size(), CV_8UC3);
-  if(lines.size()>0){
-    for (size_t i=0; i<lines.size(); i++) {
-    //for (size_t i=0; i<1; i++) {  
-      cv::Vec4i l = lines[i];
-      cv::line(result, cv::Point(l[0], l[1]), cv::Point(l[2], l[3]), cv::Scalar(255, 255, 255), 3, cv::LINE_AA);
-      std::cout << "Adding a line with points: [ " << l[0] << " , " << l[1] << " ] to [ " << l[2] << " , " << l[3] << " ]" << std::endl;
-    }
-  }
-  /* compute the "sensor readings": distances and angles */
-  /* find the line that is closest to center but left of center = x < 250 */
   float rightDeviation;
   float leftDeviation;
   float leftAngle;
@@ -438,11 +426,23 @@ int testLanePositionSensing(){
   bool leftLaneDetected;
   cv::Vec4i rightLaneLine;
   bool rightLaneDetected;
+  rightLaneDetected = accessEstimator->findRightLaneLineInHoughLines(lines, rightLaneLine, leftDeviation, leftAngle);
+  leftLaneDetected = accessEstimator->findLeftLaneLineInHoughLines(lines, leftLaneLine, rightDeviation, rightAngle);
   
+  
+  /* show the result */
   result = birdEyesViewImage;
+  /*
+  result = cv::Mat::zeros(binaryEdgesDetected.size(), CV_8UC3);
+  if(lines.size()>0){
+    for (size_t i=0; i<lines.size(); i++) { 
+      cv::Vec4i l = lines[i];
+      cv::line(result, cv::Point(l[0], l[1]), cv::Point(l[2], l[3]), cv::Scalar(255, 255, 255), 3, cv::LINE_AA);
+      std::cout << "Adding a line with points: [ " << l[0] << " , " << l[1] << " ] to [ " << l[2] << " , " << l[3] << " ]" << std::endl;
+    }
+  }
+  */
   
-  rightLaneDetected = findRightLaneLineInHoughLines(lines, rightLaneLine, leftDeviation, leftAngle);
-  leftLaneDetected = findLeftLaneLineInHoughLines(lines, leftLaneLine, rightDeviation, rightAngle);
   if(leftLaneDetected){
     std::cout << "Left Lane detected: [ " << leftLaneLine[0] << " , " << leftLaneLine[1] << " ] to [ " << leftLaneLine[2] << " , " << leftLaneLine[3] << " ]" << std::endl;
     cv::line(result, cv::Point(leftLaneLine[0], leftLaneLine[1]), cv::Point(leftLaneLine[2], leftLaneLine[3]), cv::Scalar(0, 255, 255), 3, cv::LINE_AA);
@@ -456,10 +456,9 @@ int testLanePositionSensing(){
     std::cout<<"Did not find a right lane line."<<std::endl;
   }
   
-  
-  cv::Size mat_size(500,600);
-  cv::Mat blue(mat_size, CV_8UC3, cv::Scalar(255,0,0));
-  cv::Mat green(mat_size, CV_8UC3, cv::Scalar(0,255,0));
+  //cv::Size mat_size(500,600);
+  //cv::Mat blue(mat_size, CV_8UC3, cv::Scalar(255,0,0));
+  //cv::Mat green(mat_size, CV_8UC3, cv::Scalar(0,255,0));
   
   //cv::Mat birdEyesViewAndLaneLines = mergeImages(birdEyesViewImage, result);
   
@@ -479,6 +478,19 @@ int testLanePositionSensing(){
   return 0;
 }
 
+int testEigen(){
+ 
+ 
+
+  Eigen::MatrixXd m(2,2);
+  m(0,0) = 3;
+  m(1,0) = 2.5;
+  m(0,1) = -1;
+  m(1,1) = m(1,0) + m(0,1);
+  std::cout << m << std::endl;
+  return 0;
+
+}
 
 
 int main(){
@@ -489,7 +501,8 @@ int main(){
   //flag = testImageTransformer();
   //flag = testPositionEstimator();
   //flag = testPositionServer();
-  flag = testLanePositionSensing();
+  //flag = testLanePositionSensing();
+  flag = testEigen();
   return 0;
 }
 

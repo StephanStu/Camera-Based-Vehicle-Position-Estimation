@@ -16,11 +16,18 @@ struct PositionServiceRecord{
   float distanceToRightLane;
   float angle;
   float deviation;
+  float velocity;
 };
 
 struct Position{
   float angle;
   float deviation;
+};
+
+struct Measurement{
+  float angle;
+  float deviation;
+  float velocity;
 };
 
 #endif
