@@ -57,16 +57,16 @@ void PositionEstimator::manageStateSwitches(){
 void PositionEstimator::runInRunningState(){
   /* get the record from :ImageTransformer */
   if(newRecordIsAvailable()){
-    Position position;
+    PositionServiceRecord newRecord;
     std::promise<MovableTimestampedType<PositionServiceRecord>> prms;
     std::future<MovableTimestampedType<PositionServiceRecord>> ftr = prms.get_future();
     std::thread t(&ImageTransformer::sendRecord, accessImageTransformer, std::move(prms));
     t.join();
     MovableTimestampedType<PositionServiceRecord> movableTimestampedRecord = std::move(ftr.get());
     /* apply Hough-Transform and update the estimate of the position */
-    position = updatePosition(movableTimestampedRecord);
+    newRecord = updatePosition(movableTimestampedRecord);
     /* use movableTimestampedRecord.setData(newRecord) to update the position here */
-    
+    movableTimestampedRecord.setData(newRecord);
     /* save the updated record in the member variable by "moving" it (in order to keep the timestamp!) */
     std::unique_lock<std::mutex> uniqueLock(protection);
     record = std::move(movableTimestampedRecord);
@@ -79,9 +79,12 @@ void PositionEstimator::runInRunningState(){
 
 void PositionEstimator::runInInitializingState(){
   isCurrent = false;
-  ready = imageTransformerIsMounted;
+  ready = imageTransformerIsMounted && kalmanFilterIsInitialized;
   if(!ready){
     printToConsole("PositionEstimator::runInInitializingState is called; instance is not ready to enter the running state: Mount an :ImageTransformer.");
+  }
+  if(!kalmanFilterIsInitialized){
+    initializeKalmanFilter();
   }
 }
 
@@ -94,11 +97,21 @@ void PositionEstimator::runInTerminatedState(){
 }
 
 
-Position PositionEstimator::updatePosition(MovableTimestampedType<PositionServiceRecord>& movableTimestampedRecord){
+PositionServiceRecord PositionEstimator::updatePosition(MovableTimestampedType<PositionServiceRecord>& movableTimestampedRecord){
+  PositionServiceRecord record;
+  float rightDeviation;
+  float leftDeviation;
+  float leftAngle;
+  float rightAngle;
+  cv::Vec4i leftLaneLine;
+  bool leftLaneDetected;
+  cv::Vec4i rightLaneLine;
+  bool rightLaneDetected;
+  bool someLaneDetected = false;
+  std::vector<cv::Vec4i> lines;
   long int age = movableTimestampedRecord.getAge();
   std::string message = "PositionEstimator::updatePosition: Using a record with an age of " + std::to_string(age) + " milliseconds to compute angle & deviation.";
   printToConsole(message);
-  std::vector<cv::Vec4i> lines;
   cv::Mat image = movableTimestampedRecord.getData().binaryBirdEyesViewImage;
   getHoughLines(image, lines);
   /* Print the lines found to console if suitable debugLevel is chosen */
@@ -112,10 +125,59 @@ Position PositionEstimator::updatePosition(MovableTimestampedType<PositionServic
     }
   }
   /* Use age and lines to update the kalman filter and return the current position */
-  Position position;
-  position.angle = 0.0;
-  position.deviation = 0.0;
-  return position;
+  rightLaneDetected = findRightLaneLineInHoughLines(lines, rightLaneLine, leftDeviation, leftAngle);
+  leftLaneDetected = findLeftLaneLineInHoughLines(lines, leftLaneLine, rightDeviation, rightAngle);
+  Measurement measurement;
+  if(leftLaneDetected){
+    measurement.deviation = leftDeviation;
+    measurement.angle = leftAngle;
+    measurement.velocity = 86 * 1000/3600; // To Do: Ship velocity here
+    someLaneDetected = true;
+  }else{
+    if(rightLaneDetected){
+      measurement.deviation = rightDeviation;
+      measurement.angle = rightAngle;
+      measurement.velocity = 86 * 1000/3600; // To Do: Ship velocity here
+      someLaneDetected = true;
+    }
+  }
+  if(someLaneDetected){
+    predict((age/1000.0));
+    update(measurement);
+  }else{
+    predict((age/1000.0));
+  }
+  Eigen::VectorXd x(4);
+  getStateVector(x);
+  float py = x(1);
+  float vx = x(2);
+  float vy = x(3);
+  float phi;
+  if(vx > 0){
+    printToConsole(message);
+    phi = atan(vy/vx);
+  }else{
+    phi = 0.0;
+    printToConsole("PositionEstimator::updatePosition: is called with vx < 0; using replacement value for angle now.");
+  }
+  record.rawImage = movableTimestampedRecord.getData().rawImage;
+  record.undistortedImage = movableTimestampedRecord.getData().undistortedImage;
+  record.birdEyesViewImage = movableTimestampedRecord.getData().birdEyesViewImage;
+  record.binaryBirdEyesViewImage = movableTimestampedRecord.getData().binaryBirdEyesViewImage;
+  if(leftLaneDetected){
+    record.distanceToLeftLane = leftDeviation;
+  }else{
+    record.distanceToLeftLane = -99;
+  }
+  if(rightLaneDetected){
+    record.distanceToRightLane = rightDeviation;
+  }else{
+    record.distanceToRightLane = -99;
+  }
+  record.deviation = py;
+  record.angle = phi;
+  record.velocity = sqrt(vx*vx + vy*vy);
+  return record;
 }
 
 void PositionEstimator::getHoughLines(const cv::Mat& image, std::vector<cv::Vec4i>& lines){
@@ -306,7 +368,7 @@ bool PositionEstimator::findLeftLaneLineInHoughLines(const std::vector<cv::Vec4i
 
 void PositionEstimator::initializeKalmanFilter(){
   x = Eigen::VectorXd(4);
-  x << 0.0, 0.0, 0.0, 0.0;
+  x << 0.0, 0.0, initialVelocity, 0.0;
   computeStateTransitionMatrix(0.0);
   computeProcessCovariancenMatrix(0.0);
   P = Eigen::MatrixXd(4, 4);
@@ -314,9 +376,12 @@ void PositionEstimator::initializeKalmanFilter(){
         0.0, 0.0, 0.0, 0.0,
         0.0, 0.0, 0.0, 0.0,
         0.0, 0.0, 0.0, 0.0;
+  kalmanFilterIsInitialized = true;  
 }
 
 void PositionEstimator::predict(const float timestep){
+  std::string message = "PositionEstimator::predict is called with timestep = " + std::to_string(timestep*1000) + " ms"; 
+  printToConsole(message);
   computeStateTransitionMatrix(timestep);
   computeProcessCovariancenMatrix(timestep);
   x = A * x;
@@ -325,14 +390,16 @@ void PositionEstimator::predict(const float timestep){
 }
 
 void PositionEstimator::update(const Measurement& measurement){
+  std::string message = "PositionEstimator::update is called with measured deviation = " + std::to_string(measurement.deviation * 100) + " cm, angle = " + std::to_string(measurement.angle * 180/PI)  + " deg and velocity = " + std::to_string(measurement.velocity * 3600/1000) + " km/h"; 
+  printToConsole(message);
   z = Eigen::VectorXd(3);
   z << measurement.deviation, measurement.angle, measurement.velocity;
   Eigen::MatrixXd H(3, 4); // TO DO
   H = computeJacobian(x);
   Eigen::MatrixXd R(3, 3);
-  R << 0.02, 0,  0, // variance in deviation (m)
-       0, 0.034, 0, // variance in angle (rad)
-       0, 0, 2.7; // variance in velocity (m/s)
+  R << deviationVariance, 0,  0, // variance in deviation (m)
+       0, angleVariance, 0, // variance in angle (rad)
+       0, 0, velocityVariance; // variance in velocity (m/s)
   Eigen::VectorXd y = z - mapState2Outputs(x);
   // ensure the angle to be in between -pi to pi
   while(y(1) > PI){
@@ -352,6 +419,7 @@ void PositionEstimator::update(const Measurement& measurement){
 }
 
 void PositionEstimator::computeStateTransitionMatrix(const float timestep){
+  printToConsole("PositionEstimator::computeStateTransitionMatrix is called.");
   A = Eigen::MatrixXd(4, 4);
   A << 1.0, 0.0, timestep, 0.0,
              0.0, 1.0, 0.0, timestep,
@@ -360,6 +428,7 @@ void PositionEstimator::computeStateTransitionMatrix(const float timestep){
 }
 
 void PositionEstimator::computeProcessCovariancenMatrix(const float timestep){
+  printToConsole("PositionEstimator::computeProcessCovariancenMatrix is called.");
   float dt = timestep;
   float dt_2 = dt   * dt;
   float dt_3 = dt_2 * dt;
@@ -376,17 +445,44 @@ Eigen::VectorXd PositionEstimator::mapState2Outputs(const Eigen::VectorXd& state
   float py = state(1);
   float vx = state(2);
   float vy = state(3);
-  float phi = atan(vy/vx);
+  float phi;
+  if(vx > 0){
+    std::string message = "PositionEstimator::mapState2Outputs is called with vx = " + std::to_string(vx * 3600/1000) + " km/h"; 
+    printToConsole(message);
+    phi = atan(vy/vx);
+  }else{
+    phi = 0.0;
+    printToConsole("PositionEstimator::mapState2Outputs is called with vx < 0; using replacement value for angle now.");
+  }
   float v = sqrt(vx*vx + vy*vy);
-  float d = py / cos(phi);
-  z << d, phi, v;
+  z << py, phi, v;
   return z;
 }
 
 Eigen::MatrixXd PositionEstimator::computeJacobian(const Eigen::VectorXd& state){
-  Eigen::MatrixXd H(3, 4); // TO DO
-  H << 1, 0, 0, 0,
-       0, 1, 0, 0,
-       1, 0, 0, 1;
+  printToConsole("PositionEstimator::computeJacobian is called.");
+  float vx = state(2);
+  float vy = state(3);
+  float temp = (vx*vx) + (vy*vy);
+  Eigen::MatrixXd H(3, 4);
+  H << 0, 1, 0, 0, // [dh1(x)/dpx dh1(x)/dpy dh1(x)/dvx dh1(x)/dvy] with h1 = py = distance to center lane (normal to roadcenter line)
+       0, 0, -vy/temp, vx/temp, // [dh2(x)/dpx dh2(x)/dpy dh2(x)/dvx dh2(x)/dvy] with h2 = phi = angle between direction of traveling & center lane ("+" = twist to the right)
+       0, 0, vx/sqrt(temp), vy/sqrt(temp); // [dh3(x)/dpx dh3(x)/dpy dh3(x)/dvx dh3(x)/dvy] with h3 = velocity = length of the velocity vector
   return H; 
 }
+
+ void PositionEstimator::getStateVector(Eigen::VectorXd& state){
+   float px = x(0);
+   float py = x(1);
+   float vx = x(2);
+   float vy = x(3);
+   std::string message = "PositionEstimator::getStateVector is called with state =  [ " + std::to_string(px * 100)  + 
+     " cm " +
+     std::to_string(py * 100)  + 
+     " cm " +
+     std::to_string(vx * 3600/1000)  + 
+     " km/h " +
+     std::to_string(vy * 3600/1000)  +  " km/h ]"; 
+   printToConsole(message);
+   state << px, py, vx, vy;
+ }

@@ -32,6 +32,7 @@ class PositionEstimator : public RecordServer {
     void computeProcessCovariancenMatrix(const float timestep); // compute the time-dependent process covariance matrix Q (member attribute)
     Eigen::VectorXd mapState2Outputs(const Eigen::VectorXd& state); // compute the return of the output-equation "h(x)" the vector [phi deviation]^T
     Eigen::MatrixXd computeJacobian(const Eigen::VectorXd& state); //  compute the Jacobian of the output euqation H = dh(x)/dx
+    void getStateVector(Eigen::VectorXd& state); // write the state vector to the referenced variable
   private:
     friend class PositionServer;
     void manageStateSwitches(); // this method manages switchs in States =  {initializing, running, freezed, terminated} and calls the appropriate methdos
@@ -39,11 +40,12 @@ class PositionEstimator : public RecordServer {
     void runInInitializingState(); // this method is called when State = initializing
     void runInFreezedState(); // this method is called when State = freezed
     void runInTerminatedState(); // this method is called when State = terminated
-    Position updatePosition(MovableTimestampedType<PositionServiceRecord>& movableTimestampedRecord); // this method updates the estimate of the position (member variable)
+    PositionServiceRecord updatePosition(MovableTimestampedType<PositionServiceRecord>& movableTimestampedRecord); // this method updates the estimate of the state (runs the Kalman-Filter and catches exceptions if necessary)
     std::shared_ptr<ImageTransformer> accessImageTransformer; // shared pointer to an instance of CameraDriver delivering images upond request
     bool newRecordIsAvailable(); // verifies, that the server has a new record (before requesting to send it)
     bool isVertical( cv::Vec4i line); // returns true if the line is vertical (in the image coordinate system)
     bool imageTransformerIsMounted; // this is true once an intance of ImageTransformer has been mounted
+    bool kalmanFilterIsInitialized; // this is true once the Kalman Filter has been initialized
     int threshold = 100; // parameter in Hough-Transformation, the minimum number of intersections to "*detect*" a line
     int minLineLength = 25; // parameter in Hough-Transformation, the minimum number of points that can form a line. Lines with less than this number of points are disregarded
     int maxLineGap = 50; // parameter in Hough-Transformation, the maximum gap between two points to be considered in the same line
@@ -66,6 +68,7 @@ class PositionEstimator : public RecordServer {
     const float velocityVariance = 2.78; // measurement noise variance in velocity in m/s
     const float accelerationYNoise = 0.25; // variance of acceleration assuming it is a stochastic process with zero mean 
     const float accelerationXNoise = 2.0; // variance of acceleration assuming it is a stochastic process with zero mean 
+    const float initialVelocity = 88 * 1000/3600; // initial assumption on vehicle velocity = 55 miles per hour
 };
 
 #endif

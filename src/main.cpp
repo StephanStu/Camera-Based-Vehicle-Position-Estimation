@@ -171,19 +171,10 @@ int testPositionEstimator(){
 int testPositionServer(){
   std::unique_ptr<PositionServer> srv(new PositionServer(Debuglevel::verbose));
   //srv->runCameraCalibration(true);
-  std::this_thread::sleep_for(std::chrono::milliseconds(50));
   srv->initialize();
-  std::this_thread::sleep_for(std::chrono::milliseconds(500));
-  srv->run();
-  std::this_thread::sleep_for(std::chrono::milliseconds(2000));
-  //srv->freeze();
-  srv->terminate();
   std::this_thread::sleep_for(std::chrono::milliseconds(50));
-  srv->initialize();
-  std::this_thread::sleep_for(std::chrono::milliseconds(500));
   srv->run();
-  std::this_thread::sleep_for(std::chrono::milliseconds(1000));
-  //srv->freeze();
+  std::this_thread::sleep_for(std::chrono::milliseconds(5000));
   srv->terminate();
   return 0;
 }
@@ -406,7 +397,7 @@ int testLanePositionSensing(){
   cv::Mat binaryBirdEyesViewImage;
   cv::Mat binaryEdgesDetected;
   cv::Mat result;
-  cv::Mat rawImage = cv::imread("test/test01.jpg" , cv::IMREAD_COLOR);
+  cv::Mat rawImage = cv::imread("test/test02.jpg" , cv::IMREAD_COLOR);
   /* camera driver's operations are here */
   accessCamera->undistortImage(rawImage, undistortedImage);
   /* image transformer's operations are here */
@@ -455,6 +446,29 @@ int testLanePositionSensing(){
   }else{
     std::cout<<"Did not find a right lane line."<<std::endl;
   }
+  /* run the filter operatiosn to get the estimate of the position*/
+  float timestep = 0.1; 
+  Measurement measurement;
+  if(leftLaneDetected){
+    measurement.deviation = leftDeviation;
+    measurement.angle = leftAngle;
+    measurement.velocity = 86 * 1000/3600;
+  }else{
+    if(rightLaneDetected){
+      measurement.deviation = rightDeviation;
+      measurement.angle = rightAngle;
+      measurement.velocity = 86 * 1000/3600;
+    }
+  }
+  Eigen::VectorXd x(4);
+  accessEstimator->initializeKalmanFilter(); 
+  
+  for (size_t i=0; i<10; i++){
+    accessEstimator->getStateVector(x);
+    accessEstimator->predict(timestep); 
+    accessEstimator->update(measurement);
+  }
+ 
   
   //cv::Size mat_size(500,600);
   //cv::Mat blue(mat_size, CV_8UC3, cv::Scalar(255,0,0));
@@ -479,9 +493,6 @@ int testLanePositionSensing(){
 }
 
 int testEigen(){
- 
- 
-
   Eigen::MatrixXd m(2,2);
   m(0,0) = 3;
   m(1,0) = 2.5;
@@ -500,9 +511,9 @@ int main(){
   //flag = testCameraDriver();
   //flag = testImageTransformer();
   //flag = testPositionEstimator();
-  //flag = testPositionServer();
+  flag = testPositionServer();
   //flag = testLanePositionSensing();
-  flag = testEigen();
+  //flag = testEigen();
   return 0;
 }
 

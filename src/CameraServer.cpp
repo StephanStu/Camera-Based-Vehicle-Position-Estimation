@@ -168,7 +168,7 @@ void CameraServer::manageStateSwitches(){
 }
     
 void CameraServer::runInRunningState(){
-  cv::Mat rawImage = cv::imread("test/test01.jpg" ,cv::IMREAD_COLOR);
+  cv::Mat rawImage = cv::imread("test/test02.jpg" ,cv::IMREAD_COLOR);
   cv::Mat undistortedImage;
   undistortImage(rawImage, undistortedImage);
   PositionServiceRecord newRecord;
