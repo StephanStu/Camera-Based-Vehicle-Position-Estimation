@@ -1,5 +1,13 @@
 # Vision-Based-Runway-Position-Estimation
-This is my capstone project in Udacity's C++ Nanodegree Program. As I work in the urban air mobility (UAM) industry which targets to launch production & operation of electrical vertical take-off &amp landing (eVTOL) aircrafts to offer new ways of moving in congested urban areas I am keen to accelerate this venture with easier aircaft handling and cheap equipment that is utilized well with contemporary software technology. This project contains an application that estimates the position of an aircaft as it taxis on a runway. The application generates an estimate of the deviation of the vehicle from the center lane that may be fed to the avionics in order to offer a better bearing to the pilot during taxi or may fed to an automatic taxi- & take-off algorithm that steers the vehicle along the runway to it's final take-off-position.
+This is my capstone project in Udacity's C++ Nanodegree Program. This project contains an application that estimates the position of a road vehicle as it travels on a highway. The application generates an estimate of the state of the vehicle that may be fed to a driver assistant system or may be part of an autonomous driving system: An extended Kalman Filter estimates the position on the road and the velocities using "measurements" taken from a simple camera image. The architecture of this application is service-oriented, suitable for (Ubuntu) Linux and uses OpenCV and the Eigen-Library.
+
+The application is shipped with sample images and sample videos for
+
+* static testing of the Kalman Filter
+* calibration of the camera
+* videos to test the performance of the Kalman Filter with real-world data
+
+in a save (cloud or desktop) Ubuntu-Linux Environment.
 
 ## Requirements
 
