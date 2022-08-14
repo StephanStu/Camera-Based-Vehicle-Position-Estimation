@@ -1,8 +1,5 @@
 #include "PositionServer.h"
 
-#define MEANVELOCITY 88 // km/h
-#define VARIANCEVELOCITY 5 // km/h
-
 PositionServer::PositionServer(){
   std::shared_ptr<CameraServer> sharedPointerToCameraServer(new CameraServer(debugLevel)); // create an instance + shared pointer to a CamerDriver, later moving this to the member variable.
   accessCameraServer = std::move(sharedPointerToCameraServer);
@@ -13,10 +10,6 @@ PositionServer::PositionServer(){
   imposeSleepForMillisecondsOnResources(sleepForMilliseconds);
   accessImageTransformer->mountCameraServer(accessCameraServer);
   accessPositionEstimator->mountImageTransformer(accessImageTransformer);
-  std::shared_ptr<VelocitySource> accessVelocitySource(new VelocitySource(MEANVELOCITY, VARIANCEVELOCITY));
-  accessCameraServer->mountVelocitySource(accessVelocitySource);
-  //std::shared_ptr<ImageSource> accessImageSource(new ImageSource("test/test02.jpg"));
-  //accessCameraServer->mountImageSource(accessImageSource);
 }
 
 PositionServer::PositionServer(Debuglevel positionServerDebuglevel){
@@ -31,10 +24,6 @@ PositionServer::PositionServer(Debuglevel positionServerDebuglevel){
   imposeSleepForMillisecondsOnResources(sleepForMilliseconds);
   accessImageTransformer->mountCameraServer(accessCameraServer);
   accessPositionEstimator->mountImageTransformer(accessImageTransformer);
-  std::shared_ptr<VelocitySource> accessVelocitySource(new VelocitySource(MEANVELOCITY, VARIANCEVELOCITY));
-  accessCameraServer->mountVelocitySource(accessVelocitySource);
-  //std::shared_ptr<ImageSource> accessImageSource(new ImageSource("test/test02.jpg"));
-  //accessCameraServer->mountImageSource(accessImageSource);
 }
    
 void PositionServer::run(){
@@ -89,12 +78,6 @@ void PositionServer::freeze(){
   accessImageTransformer->setCurrentState(currentState);
   accessCameraServer->setCurrentState(currentState);
 }
-
-void PositionServer::getRecord(PositionServiceRecord& record){
-}
-    
-void PositionServer::getPosition(Position& position){
-}
     
 void PositionServer::runCameraCalibration(bool saveResults){
   printToConsole("PositionServer::runCameraCalibration called.");
@@ -114,4 +97,14 @@ void PositionServer::imposeSleepForMillisecondsOnResources(unsigned int time){
   accessImageTransformer->setSleepForMilliseconds(time);
   accessCameraServer->setSleepForMilliseconds(time);
   accessPositionEstimator->setSleepForMilliseconds(time);
+}
+
+void PositionServer::mountImageSource(std::shared_ptr<ImageSource> pointerToImageSource){
+  printToConsole("PositionServer::mountImageSource called.");
+  accessCameraServer->mountImageSource(pointerToImageSource);
+}
+
+void PositionServer::mountVelocitySource(std::shared_ptr<VelocitySource> pointerToVelocitySource){
+  printToConsole("PositionServer::mountVelocitySource called.");
+  accessCameraServer->mountVelocitySource(pointerToVelocitySource);
 }

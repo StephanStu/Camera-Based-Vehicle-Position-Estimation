@@ -22,9 +22,9 @@ class PositionServer : public RunnableEntity {
     void initialize(); // initializing routine must be called before run
     void terminate(); // routine terminating drivers & servers; implements a termination sequence for the components
     void freeze(); // imposes the freezed state, resources stop to manipulate the attributes now
-    void getRecord(PositionServiceRecord& record); // writes the PositionServiceRecord to the referred variable
-    void getPosition(Position& position); // write the Position to the referred variable
     void runCameraCalibration(bool saveResults); // runs camera calibration and saves the results to the disc if the argument is true
+    void mountImageSource(std::shared_ptr<ImageSource> pointerToImageSource); // "mounts" the instance of ImageSource to the instance of CameraDriver by saving the shared pointer in the member variables
+    void mountVelocitySource(std::shared_ptr<VelocitySource> pointerToVelocitySource); // "mounts" the instance of ImageSource to the instance of CameraDriver by saving the shared pointer in the member variables
   private:
     std::shared_ptr<CameraServer> accessCameraServer; // an instance (+ shared pointer to access the) camera driver, which is managed by the PositionEstimationService
     std::shared_ptr<ImageTransformer> accessImageTransformer; // an instance (+ shared pointer to access the) image transformer, which is managed by the PositionEstimationService

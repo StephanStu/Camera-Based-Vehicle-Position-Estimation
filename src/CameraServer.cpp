@@ -169,10 +169,12 @@ void CameraServer::manageStateSwitches(){
 }
     
 void CameraServer::runInRunningState(){
-  cv::Mat rawImage = cv::imread("test/test02.jpg" ,cv::IMREAD_COLOR);
+  //cv::Mat rawImage = cv::imread("test/test02.jpg" ,cv::IMREAD_COLOR);
+  cv::Mat rawImage; 
   cv::Mat undistortedImage;
-  undistortImage(rawImage, undistortedImage);
   PositionServiceRecord newRecord;
+  accessImageSource->getNextImage(rawImage);
+  undistortImage(rawImage, undistortedImage);
   newRecord.rawImage = std::move(rawImage);
   newRecord.undistortedImage = std::move(undistortedImage);
   accessVelocitySource->getNextVelocityMeasurement(newRecord.velocity);
@@ -212,7 +214,7 @@ void CameraServer::runInTerminatedState(){
 void CameraServer::mountImageSource(std::shared_ptr<ImageSource> pointerToImageSource){
   printToConsole("CameraServer::mountImageSource called, instance of ImageSource is mounted by keeping the shared pointer.");
   accessImageSource = pointerToImageSource;
-  bool imageSourceIsMounted = true;
+  imageSourceIsMounted = true;
 }
 
 void CameraServer::mountVelocitySource(std::shared_ptr<VelocitySource> pointerToVelocitySource){
@@ -231,4 +233,33 @@ void VelocitySource::getNextVelocityMeasurement(float& velocityMeasurement){
   std::mt19937 gen(rd()); //Standard mersenne_twister_engine seeded with rd()
   std::uniform_int_distribution<> distrib(1, variance);
   velocityMeasurement = float(distrib(gen) + mean - variance/2) * 1000/3600;
+}
+
+void ImageSource::setFileType(const std::string fileName){
+  filetype = Filetype::unknown;
+  std::string jpg = "jpg";
+  std::string mp4 = "mp4";
+  int length = fileName.length();
+  std::string fileExtension = fileName.substr(length-3,length);
+  if(fileName.length()>4){
+    if(jpg.compare(fileExtension) == 0){filetype = Filetype::jpg;}
+    if(mp4.compare(fileExtension) == 0){filetype = Filetype::mp4;}
+  } 
+}
+
+ImageSource::ImageSource(const std::string nameOfFile){
+  setFileType(nameOfFile);
+  filename = nameOfFile;
+}
+
+void ImageSource::getNextImage(cv::Mat& image){
+  if(filetype == Filetype::jpg){
+    image = cv::imread(filename, cv::IMREAD_COLOR);
+  }
+  if(filetype == Filetype::mp4){
+    image = cv::imread("test/test02.jpg", cv::IMREAD_COLOR);
+  }
+  if(filetype == Filetype::unknown){
+    image = cv::imread("test/test02.jpg", cv::IMREAD_COLOR);
+  }
 }

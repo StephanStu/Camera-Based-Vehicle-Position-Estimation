@@ -15,9 +15,11 @@ The raw & undistorted image in the record are frequently updated by pulling raw 
 
 ImageSource:
 Provides Images from i) a video file or ii) one static image (in a repetitive manner) to the CameraServer.
+Note: This entity must be mounted to CamerDriver outside of Position Server, because the source of images is provided outside of PositioServer.
 
 VelocitySource:
 Provides a simualted velocity measurment to the CameraServer by adding some artifical noise to a mean velocity provided by caller.
+Note: This entity must be mounted to CamerDriver outside of Position Server, because mean & variance of velocity are provided outside of PositioServer.
 */
 
 class VelocitySource{
@@ -34,8 +36,9 @@ class ImageSource{
     ImageSource(const std::string nameOfFile);
     void getNextImage(cv::Mat& image);
   private:
+    void setFileType(const std::string fileName);
     Filetype filetype;
-    std::string fileName;  
+    std::string filename;  
 };
 
 class CameraServer : public RecordServer {

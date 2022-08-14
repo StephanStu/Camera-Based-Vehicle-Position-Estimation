@@ -139,120 +139,21 @@ int testPositionServer(){
   return 0;
 }
 
-void showImage(cv::Mat img){
-  int delay = 0;
-  cv::imshow("Your Image", img);
-  cv::waitKey(delay);
-}
 
-
-
-
-
-
-int testLanePositionSensing(){
-  /* resource initialization*/
-  std::shared_ptr<CameraServer> accessCamera(new CameraServer(Debuglevel::verbose));
-  accessCamera->readCameraCalibrationDataFromFile();
-  std::shared_ptr<ImageTransformer> accessTransformer(new ImageTransformer(Debuglevel::verbose));
-  accessTransformer->setBirdEyesTransformMatrix();
-  std::shared_ptr<PositionEstimator> accessEstimator(new PositionEstimator(Debuglevel::verbose));
-  /* laod test image & create empty images to hold results */
-  cv::Mat undistortedImage;
-  cv::Mat gaussianBlurredImage;
-  cv::Mat grayImage;
-  cv::Mat birdEyesViewImage;
-  cv::Mat binaryBirdEyesViewImage;
-  cv::Mat binaryEdgesDetected;
-  cv::Mat result;
-  cv::Mat rawImage = cv::imread("test/test02.jpg" , cv::IMREAD_COLOR);
-  /* camera driver's operations are here */
-  accessCamera->undistortImage(rawImage, undistortedImage);
-  /* image transformer's operations are here */
-  accessTransformer->applyGausianBlurr(undistortedImage , gaussianBlurredImage);
-  accessTransformer->convertToGrayImage(gaussianBlurredImage, grayImage);
-  accessTransformer->convertToBirdEyesView(grayImage, birdEyesViewImage);
-  accessTransformer->convertToBinaryImage(birdEyesViewImage, binaryBirdEyesViewImage);
-  accessTransformer->detectEdges(binaryBirdEyesViewImage, binaryEdgesDetected);
-  /* position estimator's operations are here */
-  std::vector<cv::Vec4i> lines;
-  accessEstimator->getHoughLines(binaryEdgesDetected, lines);
-  float rightDeviation;
-  float leftDeviation;
-  float leftAngle;
-  float rightAngle;
-  cv::Vec4i leftLaneLine;
-  bool leftLaneDetected;
-  cv::Vec4i rightLaneLine;
-  bool rightLaneDetected;
-  rightLaneDetected = accessEstimator->findRightLaneLineInHoughLines(lines, rightLaneLine, leftDeviation, leftAngle);
-  leftLaneDetected = accessEstimator->findLeftLaneLineInHoughLines(lines, leftLaneLine, rightDeviation, rightAngle);
-  
-  
-  /* show the result */
-  result = birdEyesViewImage;
-  
-  
-  if(leftLaneDetected){
-    std::cout << "Left Lane detected: [ " << leftLaneLine[0] << " , " << leftLaneLine[1] << " ] to [ " << leftLaneLine[2] << " , " << leftLaneLine[3] << " ]" << std::endl;
-    cv::line(result, cv::Point(leftLaneLine[0], leftLaneLine[1]), cv::Point(leftLaneLine[2], leftLaneLine[3]), cv::Scalar(0, 255, 255), 3, cv::LINE_AA);
-  }else{
-    std::cout<<"Did not find a left lane line."<<std::endl;
-  }
-  if(rightLaneDetected){
-    std::cout << "Right Lane detected: [ " << rightLaneLine[0] << " , " << rightLaneLine[1] << " ] to [ " << rightLaneLine[2] << " , " << rightLaneLine[3] << " ]" << std::endl;
-    cv::line(result, cv::Point(rightLaneLine[0], rightLaneLine[1]), cv::Point(rightLaneLine[2], rightLaneLine[3]), cv::Scalar(0, 255, 255), 3, cv::LINE_AA);
-  }else{
-    std::cout<<"Did not find a right lane line."<<std::endl;
-  }
-  /* run the filter operatiosn to get the estimate of the position*/
-  float timestep = 0.1; 
-  Measurement measurement;
-  if(leftLaneDetected){
-    measurement.deviation = leftDeviation;
-    measurement.angle = leftAngle;
-    measurement.velocity = 86 * 1000/3600;
-  }else{
-    if(rightLaneDetected){
-      measurement.deviation = rightDeviation;
-      measurement.angle = rightAngle;
-      measurement.velocity = 86 * 1000/3600;
-    }
-  }
-  Eigen::VectorXd x(4);
-  accessEstimator->initializeKalmanFilter(); 
-  
-  for (size_t i=0; i<10; i++){
-    accessEstimator->getStateVector(x);
-    accessEstimator->predict(timestep); 
-    accessEstimator->update(measurement);
-  }
- 
-  
-  //cv::Size mat_size(500,600);
-  //cv::Mat blue(mat_size, CV_8UC3, cv::Scalar(255,0,0));
-  //cv::Mat green(mat_size, CV_8UC3, cv::Scalar(0,255,0));
-  
-  //cv::Mat birdEyesViewAndLaneLines = mergeImages(birdEyesViewImage, result);
-  
-  /* find the line that is closest to center but right of center = x > 250 */
-  
-  //int rows = cv::max(rawImage.rows, binaryEdgesDetcted.rows);
-  //int cols = rawImage.cols + binaryEdgesDetcted.cols;
-  //cv::Mat result(rows, cols,  CV_8UC3);
-  //rawImage.copyTo(result(cv::Rect(0, 0, rawImage.cols, rawImage.rows)));
-  //binaryEdgesDetcted.copyTo(result(cv::Rect(rawImage.cols, 0, binaryEdgesDetcted.cols, binaryEdgesDetcted.rows)));
-  showImage(result);
-  
-  //int rows = cv::max(birdEyesViewImage.rows, binaryEdgesDetected.rows);
-  //int cols = birdEyesViewImage.cols + binaryEdgesDetected.cols;
-  //cv::Mat merged = cv::Mat::zeros(cv::Size(cols, rows), CV_8UC3);
-  
-  return 0;
-}
 
 void runWithVideo(const std::string fileName){
-  std::cout << "Running simulation with video-file '" << fileName << "'"<< std::endl;
+  /* resource initialization*/
+  std::unique_ptr<PositionServer> srv(new PositionServer(Debuglevel::verbose));
+  std::shared_ptr<VelocitySource> accessVelocitySource(new VelocitySource(MEANVELOCITY, VARIANCEVELOCITY));
+  srv->mountVelocitySource(accessVelocitySource);
+  std::shared_ptr<ImageSource> accessImageSource(new ImageSource(fileName));
+  srv->mountImageSource(accessImageSource);
+  //srv->runCameraCalibration(true);
+  srv->initialize();
+  std::this_thread::sleep_for(std::chrono::milliseconds(50));
+  srv->run();
+  std::this_thread::sleep_for(std::chrono::milliseconds(5000));
+  srv->terminate();
 }
 
 void runWithStaticImage(const std::string fileName){
@@ -359,6 +260,7 @@ int main(int argcount, const char** argvalue){
   //flag = testPositionServer();
   //flag = testLanePositionSensing();
   //flag = testEigen();
+  
   std::string fileName;
   Filetype filetype;
   bool validFileTypeProvided;
