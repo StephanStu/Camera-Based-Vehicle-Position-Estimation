@@ -8,6 +8,8 @@ enum State {initializing, running, freezed, terminated}; // states to control th
 
 enum Stimulation{image, video}; // ways to excite the service for testing on Linux: Statis image with artificial timestep or video
 
+enum Filetype{mp4, jpg, unknown}; // allowable filetypes that can be consumed by the service
+
 struct PositionServiceRecord{
   cv::Mat rawImage;
   cv::Mat undistortedImage;
@@ -18,7 +20,7 @@ struct PositionServiceRecord{
   float distanceToRightLane; // measured in the image
   float deviation; // output of the kalman filter
   float angle; // output of the kalman filter
-  float velocity; // output of the kalman filter
+  float velocity; // measured in the vehicle, usually by catching wheel rotational speed
 };
 
 struct Position{

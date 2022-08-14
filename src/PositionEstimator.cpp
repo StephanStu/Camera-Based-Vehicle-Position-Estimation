@@ -131,13 +131,13 @@ PositionServiceRecord PositionEstimator::updatePosition(MovableTimestampedType<P
   if(leftLaneDetected){
     measurement.deviation = leftDeviation;
     measurement.angle = leftAngle;
-    measurement.velocity = 86 * 1000/3600; // To Do: Ship velocity here
+    measurement.velocity = movableTimestampedRecord.getData().velocity; // To Do: Ship velocity here
     someLaneDetected = true;
   }else{
     if(rightLaneDetected){
       measurement.deviation = rightDeviation;
       measurement.angle = rightAngle;
-      measurement.velocity = 86 * 1000/3600; // To Do: Ship velocity here
+      measurement.velocity = movableTimestampedRecord.getData().velocity; // To Do: Ship velocity here
       someLaneDetected = true;
     }
   }

@@ -1,5 +1,8 @@
 #include "PositionServer.h"
 
+#define MEANVELOCITY 88 // km/h
+#define VARIANCEVELOCITY 5 // km/h
+
 PositionServer::PositionServer(){
   std::shared_ptr<CameraServer> sharedPointerToCameraServer(new CameraServer(debugLevel)); // create an instance + shared pointer to a CamerDriver, later moving this to the member variable.
   accessCameraServer = std::move(sharedPointerToCameraServer);
@@ -10,6 +13,10 @@ PositionServer::PositionServer(){
   imposeSleepForMillisecondsOnResources(sleepForMilliseconds);
   accessImageTransformer->mountCameraServer(accessCameraServer);
   accessPositionEstimator->mountImageTransformer(accessImageTransformer);
+  std::shared_ptr<VelocitySource> accessVelocitySource(new VelocitySource(MEANVELOCITY, VARIANCEVELOCITY));
+  accessCameraServer->mountVelocitySource(accessVelocitySource);
+  //std::shared_ptr<ImageSource> accessImageSource(new ImageSource("test/test02.jpg"));
+  //accessCameraServer->mountImageSource(accessImageSource);
 }
 
 PositionServer::PositionServer(Debuglevel positionServerDebuglevel){
@@ -24,6 +31,10 @@ PositionServer::PositionServer(Debuglevel positionServerDebuglevel){
   imposeSleepForMillisecondsOnResources(sleepForMilliseconds);
   accessImageTransformer->mountCameraServer(accessCameraServer);
   accessPositionEstimator->mountImageTransformer(accessImageTransformer);
+  std::shared_ptr<VelocitySource> accessVelocitySource(new VelocitySource(MEANVELOCITY, VARIANCEVELOCITY));
+  accessCameraServer->mountVelocitySource(accessVelocitySource);
+  //std::shared_ptr<ImageSource> accessImageSource(new ImageSource("test/test02.jpg"));
+  //accessCameraServer->mountImageSource(accessImageSource);
 }
    
 void PositionServer::run(){

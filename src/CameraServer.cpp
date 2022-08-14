@@ -1,4 +1,5 @@
 #include "CameraServer.h"
+#include <random>
 #include <string>
 
 CameraServer::CameraServer(Debuglevel cameraServerDebugLevel) : calibrationDataIsLoaded(false) {
@@ -174,6 +175,7 @@ void CameraServer::runInRunningState(){
   PositionServiceRecord newRecord;
   newRecord.rawImage = std::move(rawImage);
   newRecord.undistortedImage = std::move(undistortedImage);
+  accessVelocitySource->getNextVelocityMeasurement(newRecord.velocity);
   MovableTimestampedType<PositionServiceRecord> newMovableTimestampedRecord(newRecord, Debuglevel::none);
   std::unique_lock<std::mutex> uniqueLock(protection);
   record = std::move(newMovableTimestampedRecord);
@@ -183,7 +185,7 @@ void CameraServer::runInRunningState(){
     
 void CameraServer::runInInitializingState(){
   isCurrent = false;
-  ready = calibrationDataIsLoaded;
+  ready = (calibrationDataIsLoaded && imageSourceIsMounted) && velocitySourceIsMounted;
   if(!ready){
     printToConsole("CameraServer::runInInitializingState is called but instance is not ready yet.");
   }else{
@@ -205,4 +207,28 @@ void CameraServer::runInFreezedState(){
     
 void CameraServer::runInTerminatedState(){
   isCurrent = false;
+}
+
+void CameraServer::mountImageSource(std::shared_ptr<ImageSource> pointerToImageSource){
+  printToConsole("CameraServer::mountImageSource called, instance of ImageSource is mounted by keeping the shared pointer.");
+  accessImageSource = pointerToImageSource;
+  bool imageSourceIsMounted = true;
+}
+
+void CameraServer::mountVelocitySource(std::shared_ptr<VelocitySource> pointerToVelocitySource){
+  printToConsole("CameraServer::mountVelocitySource called, instance of VelocitySource is mounted by keeping the shared pointer.");
+  accessVelocitySource = pointerToVelocitySource;
+  velocitySourceIsMounted = true;
+}
+
+VelocitySource::VelocitySource(const int meanVelocity, const int varianceVelocity){
+  mean = meanVelocity;
+  variance = varianceVelocity;
+}
+
+void VelocitySource::getNextVelocityMeasurement(float& velocityMeasurement){
+  std::random_device rd;  //Will be used to obtain a seed for the random number engine
+  std::mt19937 gen(rd()); //Standard mersenne_twister_engine seeded with rd()
+  std::uniform_int_distribution<> distrib(1, variance);
+  velocityMeasurement = float(distrib(gen) + mean - variance/2) * 1000/3600;
 }
