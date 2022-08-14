@@ -15,11 +15,11 @@ The following requirements hold:
 * 01: An image of the road in front of the vehicle must be read from an image source and at the same time the vehicle velocity must be captured. These two entities must be saved in a structure at the same time.
 * 02: An image of the road in front of the vehicle must be undistorted before it is used in downstream image processing.
 * 03: The undistorted image must be used to detect lanes in the image.
-* 04: If lanes can be detected in the image, the distance to the center line of the road and the angle of the vehilce w.r.t. the center line of the road must be computed.
-* 05: Distances and angles computed from images of the road in front of the vehicle must not be used directly but fed into a filter minimizing the effects of noise, processing time and uncertainty in the accuracy of the image processing algorithm.
-* 06: The trip must be reocrded in a file; the file must contain the estimated state, the timestamp of the estimate and the distances & angles computed with image processing to arrive at the state estimate.
+* 04: If lanes can be detected in the image, the distance to the center line of the road and the angle of the vehicle w.r.t. the center line of the road must be computed.
+* 05: Distances and angles computed from images of the road in front of the vehicle must not be used directly by clients of this service; they must but fed into a filter minimizing the effects of noise, processing time and uncertainty in the accuracy of the image processing algorithm. Clients of this service consume the estimated state only.
+* 06: The trip must be recorded in a file; the file must contain the estimated state, the timestamp and the distances & angles computed with image processing to arrive at the state estimate.
 
-## Architecture &amp Mapping of Requirements to Software
+## Architecture & Mapping of Requirements to Software
 
 ## Dependencies for Running Locally
 This section lists the dependencies of the application &amp how to get them.
