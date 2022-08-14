@@ -11,13 +11,14 @@ in a save (cloud or desktop) Ubuntu-Linux Environment.
 
 ## Requirements
 The following requirements hold:
-* 00: The position of the vehicle on the road must be updated when a new image becomes available at the source of images of the road in front of the vehicle.
-* 01: An image of the road in front of the vehicle must be read from an image source and at the same time the vehicle velocity must be captured. These two entities must be saved in a structure at the same time.
-* 02: An image of the road in front of the vehicle must be undistorted before it is used in downstream image processing.
-* 03: The undistorted image must be used to detect lanes in the image.
-* 04: If lanes can be detected in the image, the distance to the center line of the road and the angle of the vehicle w.r.t. the center line of the road must be computed.
-* 05: Distances and angles computed from images of the road in front of the vehicle must not be used directly by clients of this service; they must but fed into a filter minimizing the effects of noise, processing time and uncertainty in the accuracy of the image processing algorithm. Clients of this service consume the estimated state only.
-* 06: The trip must be recorded in a file; the file must contain the estimated state, the timestamp and the distances & angles computed with image processing to arrive at the state estimate.
+* *REQ-ID00*: The position of the vehicle on the road must be updated when a new image becomes available at the source of images of the road in front of the vehicle.
+* *REQ-ID01*: The application must support external start, freeze and termination to be launched and terminated depending on the situation of the raod vehicle (e.g. when off-highway in a suburban area with very curvy roards).
+* *REQ-ID02*: An image of the road in front of the vehicle must be read from an image source and at the same time the vehicle velocity must be captured. These two entities must be saved in a structure at the same time.
+* *REQ-ID03*: An image of the road in front of the vehicle must be undistorted before it is used in downstream image processing.
+* *REQ-ID04*: The undistorted image must be used to detect lanes in the image.
+* *REQ-ID05*: If lanes can be detected in the image, the distance to the center line of the road and the angle of the vehicle w.r.t. the center line of the road must be computed.
+* *REQ-ID06*: Distances and angles computed from images of the road in front of the vehicle must not be used directly by clients of this service; they must but fed into a filter minimizing the effects of noise, processing time and uncertainty in the accuracy of the image processing algorithm. Clients of this service consume the estimated state only.
+* *REQ-ID07*: The trip must be recorded in a file; the file must contain the estimated state, the timestamp and the distances & angles computed with image processing to arrive at the state estimate.
 
 ## Architecture & Mapping of Requirements to Software
 
