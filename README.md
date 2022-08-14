@@ -47,6 +47,37 @@ This section explains how to build &amp deploy the application.
 3. Compile: `cmake .. && make`
 4. Run it: `./VBRPE`.
 
+## Running the Application
+The application can be run by calling it with a relative path to a suitable video or a relative path to a suitable image.
+Suitable images and videos are part of this repository:
+
+* Find suitable images in /build/test, e.g. /test/test01.jpg
+* Find suitable videos in /build/, e.g. video01.mp4
+
+The application runs in a multi-threaded mode when parsing a suitable video, otherwise it runs in a single-threaded mode. Parsing a suitable image is usefull to test convergence of the filter with "perfect" road images.
+
+### Running the Application with a Suitable Image
+To run with a suitable image, switch to /build/ and
+
+TO DO: ADD COMMANDS HERE
+
+A trip is simulated assuming the same image appears again and again in the camera of the vehicle. 
+Find the resulting record of this trip in the same directory as name-of-the-file-passed.csv
+Note: Roughly constant vehicle velocity is assumed, as defined in main.cpp:
+
+ADD DEFINED HERE
+
+### Running the Application with a Suitable Video
+To run with a suitable image, switch to /build/ and
+
+TO DO: ADD COMMANDS HERE
+
+A trip is simulated drawing video frames at a frequency simulating the camera of the vehicle. 
+Find the resulting record of this trip in the same directory as name-of-the-file-passed.csv
+Note: Roughly constant vehicle velocity is assumed, as defined in main.cpp:
+
+ADD DEFINED HERE
+
 ## Literature cited
 [1] B.Anbarasu  &amp G.Anitha, Vision-based runway recognition and position estimation for UAV
 autonomous landing, find it [here](https://papers.ssrn.com/sol3/papers.cfm?abstract_id=2792686)
