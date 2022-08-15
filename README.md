@@ -39,7 +39,7 @@ This section explains how to build &amp deploy the application.
 The application can be run by calling it with a relative path to a suitable video or a relative path to a suitable image.
 Suitable images and videos are part of this repository:
 
-* Find suitable images in /build/test, e.g. /test/test01.jpg
+* Find suitable images in /build/test, e.g. test/test01.jpg
 * Find suitable videos in /build/, e.g. video01.mp4
 
 The application runs in a multi-threaded mode when parsing a suitable video, otherwise it runs in a single-threaded mode. Parsing a suitable image is usefull to test convergence of the filter with "perfect" road images.
@@ -53,7 +53,11 @@ A trip is simulated assuming the same image appears again and again in the camer
 Find the resulting record of this trip in the same directory as the application: results.txt
 Note: Roughly constant vehicle velocity is assumed, as defined in main.cpp:
 
-ADD DEFINED HERE
+```cpp
+#define MEANVELOCITY 88 // km/h
+#define VARIANCEVELOCITY 5 // km/h
+#define RUNTIME 15000 // ms
+```
 
 ### Running the Application with a Suitable Video
 To run with a suitable image, switch to /build/ and
