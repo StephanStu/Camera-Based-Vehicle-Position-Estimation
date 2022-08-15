@@ -1,4 +1,5 @@
 #include <eigen3/Eigen/Dense>
+#include <fstream>
 #include "PositionEstimator.h"
 
 #define PI 3.14159265
@@ -131,24 +132,27 @@ PositionServiceRecord PositionEstimator::updatePosition(MovableTimestampedType<P
   if(leftLaneDetected){
     measurement.deviation = leftDeviation;
     measurement.angle = leftAngle;
-    measurement.velocity = movableTimestampedRecord.getData().velocity; // To Do: Ship velocity here
+    measurement.velocity = movableTimestampedRecord.getData().velocity;
     someLaneDetected = true;
   }else{
     if(rightLaneDetected){
       measurement.deviation = rightDeviation;
       measurement.angle = rightAngle;
-      measurement.velocity = movableTimestampedRecord.getData().velocity; // To Do: Ship velocity here
+      measurement.velocity = movableTimestampedRecord.getData().velocity;
       someLaneDetected = true;
     }
   }
+  /*Estimate the state if measurement is available, otherwise simulate the state*/
   if(someLaneDetected){
     predict((age/1000.0));
     update(measurement);
   }else{
     predict((age/1000.0));
   }
+  time = time + (age/1000.0);
   Eigen::VectorXd x(4);
   getStateVector(x);
+  float px = x(0);
   float py = x(1);
   float vx = x(2);
   float vy = x(3);
@@ -168,15 +172,22 @@ PositionServiceRecord PositionEstimator::updatePosition(MovableTimestampedType<P
     record.distanceToLeftLane = leftDeviation;
   }else{
     record.distanceToLeftLane = -99;
+    leftDeviation = -99;
+    leftAngle = PI;
   }
   if(rightLaneDetected){
     record.distanceToRightLane = rightDeviation;
   }else{
     record.distanceToRightLane = -99;
+    rightDeviation = -99;
+    rightAngle = PI;
   }
   record.deviation = py;
   record.angle = phi;
   record.velocity = sqrt(vx*vx + vy*vy);
+  /* Save state & measurements in internal trip recorder*/
+  feedToTripRecorderRecords(time, px, py, vx, vy, phi, leftDeviation, leftAngle, rightDeviation, rightAngle);
+  /* rerutn the reocrd to the caller */
   return record;
 }
 
@@ -197,6 +208,22 @@ void PositionEstimator::createHoughLinesImage(const cv::Mat& source, cv::Mat des
       cv::line(destination, cv::Point(l[0], l[1]), cv::Point(l[2], l[3]), cv::Scalar(255, 255, 255), 3, cv::LINE_AA);
     }
   }
+}
+
+void PositionEstimator::feedToTripRecorderRecords(const float& time, const float& px, const float& py, const float& vx, const float& vy, const float& angle, const float& leftDeviation, const float& leftAngle, const float& rightDeviation, const float& rightAngle){
+  printToConsole("PositionEstimator::feedToTripRecorderRecords is called.");
+  TripRecorderRecord record;
+  record.time = time; 
+  record.px = px; 
+  record.py = py; 
+  record.vx = vx; 
+  record.vy = vy; 
+  record.angle = angle; 
+  record.leftDeviation = leftDeviation; 
+  record.leftAngle = leftAngle; 
+  record.rightDeviation = rightDeviation; 
+  record.rightAngle = rightAngle; 
+  tripRecorderRecords.push_back(record);
 }
 
 bool PositionEstimator::newRecordIsAvailable(){
@@ -486,3 +513,35 @@ Eigen::MatrixXd PositionEstimator::computeJacobian(const Eigen::VectorXd& state)
    printToConsole(message);
    state << px, py, vx, vy;
  }
+
+void PositionEstimator::saveTripRecorderRecordsToFile(const std::string filename){
+  TripRecorderRecord record;
+  std::string message;
+  if(tripRecorderRecords.size() > 0){
+    printToConsole("PositionEstimator::saveTripRecorderRecordsToFile is printing time px py vx vy angle leftDeviation leftAngle rightDeveiation rightAngle to file");
+    std::ofstream recordFile(filename, std::ofstream::out);
+    if(recordFile.is_open()){
+      recordFile << "time ; px ; py ; vx ; vy ; angle ; leftDeviation ; leftAngle ; rightDeveiation ; rightAngle" << "\n";
+      }else{
+        printToConsole("PositionEstimator::saveTripRecorderRecordsToFile cannot access the file, skipping title column.");
+      }
+    while(tripRecorderRecords.size() > 0){
+      record = tripRecorderRecords.front();
+      // convert this to a string
+      // write this to file
+      if(recordFile.is_open()){
+        message = std::to_string(record.time) + " ; " + std::to_string(record.px) + " ; " + std::to_string(record.py) + " ; " + std::to_string(record.vx) + " ; " + std::to_string(record.vy) + " ; " + std::to_string(record.angle) + " ; " + std::to_string(record.leftDeviation) + " ; " + std::to_string(record.leftAngle) + " ; " + std::to_string(record.rightDeviation) + " ; " + std::to_string(record.rightAngle);
+        recordFile << message << "\n";
+      }else{
+        printToConsole("PositionEstimator::saveTripRecorderRecordsToFile cannot access the file, skipping a record.");
+      }
+      // print this to console
+      printToConsole(message);
+      // pop the first element
+      tripRecorderRecords.erase(tripRecorderRecords.begin());
+    }
+    recordFile.close();
+  }else{
+    printToConsole("PositionEstimator::saveTripRecorderRecordsToFile is called but vector of records is empty.");
+  }
+}

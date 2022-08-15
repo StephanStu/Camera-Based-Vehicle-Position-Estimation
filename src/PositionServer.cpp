@@ -68,6 +68,9 @@ void PositionServer::terminate(){
   accessPositionEstimator->setCurrentState(currentState);
   accessImageTransformer->setCurrentState(currentState);
   accessCameraServer->setCurrentState(currentState);
+  std::this_thread::sleep_for(std::chrono::milliseconds(sleepForMilliseconds));
+  std::string resultFileName = "result.txt";
+  accessPositionEstimator->saveTripRecorderRecordsToFile(resultFileName);
 }
 
 void PositionServer::freeze(){

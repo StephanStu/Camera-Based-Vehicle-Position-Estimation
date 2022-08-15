@@ -125,22 +125,6 @@ int testCameraDriver(){
   return 0;
 }
 
-
-
-
-int testPositionServer(){
-  std::unique_ptr<PositionServer> srv(new PositionServer(Debuglevel::verbose));
-  //srv->runCameraCalibration(true);
-  srv->initialize();
-  std::this_thread::sleep_for(std::chrono::milliseconds(50));
-  srv->run();
-  std::this_thread::sleep_for(std::chrono::milliseconds(5000));
-  srv->terminate();
-  return 0;
-}
-
-
-
 void runWithVideo(const std::string fileName){
   /* resource initialization*/
   std::unique_ptr<PositionServer> srv(new PositionServer(Debuglevel::verbose));
@@ -152,7 +136,7 @@ void runWithVideo(const std::string fileName){
   srv->initialize();
   std::this_thread::sleep_for(std::chrono::milliseconds(50));
   srv->run();
-  std::this_thread::sleep_for(std::chrono::milliseconds(5000));
+  std::this_thread::sleep_for(std::chrono::milliseconds(10000));
   srv->terminate();
 }
 
@@ -185,6 +169,12 @@ void runWithStaticImage(const std::string fileName){
   bool rightLaneDetected;
   std::vector<cv::Vec4i> lines;
   Eigen::VectorXd x(4);
+  float time = 0;
+  float px;
+  float py;
+  float vx;
+  float vy;
+  float phi;
   /* camera driver's operations are here */
   accessCamera->undistortImage(rawImage, undistortedImage);
   /* image transformer's operations are here */
@@ -204,12 +194,16 @@ void runWithStaticImage(const std::string fileName){
     cv::line(result, cv::Point(leftLaneLine[0], leftLaneLine[1]), cv::Point(leftLaneLine[2], leftLaneLine[3]), cv::Scalar(0, 255, 255), 3, cv::LINE_AA);
   }else{
     std::cout<<"Did not find a left lane line."<<std::endl;
+    leftDeviation = -99;
+    leftAngle = PI;
   }
   if(rightLaneDetected){
     std::cout << "Right Lane detected: [ " << rightLaneLine[0] << " , " << rightLaneLine[1] << " ] to [ " << rightLaneLine[2] << " , " << rightLaneLine[3] << " ]" << std::endl;
     cv::line(result, cv::Point(rightLaneLine[0], rightLaneLine[1]), cv::Point(rightLaneLine[2], rightLaneLine[3]), cv::Scalar(0, 255, 255), 3, cv::LINE_AA);
   }else{
     std::cout<<"Did not find a right lane line."<<std::endl;
+    rightDeviation = -99;
+    rightAngle = PI;
   }
   /* run the filter operatiosn to get the estimate of the position*/
   float timestep = 0.1; 
@@ -231,7 +225,21 @@ void runWithStaticImage(const std::string fileName){
     accessEstimator->predict(timestep);
     accessVelocitySource->getNextVelocityMeasurement(measurement.velocity);
     accessEstimator->update(measurement);
+    /* feed quantities to trip recorder */
+    px = x(0);
+    py = x(1);
+    vx = x(2);
+    vy = x(3);
+    if(vx > 0){
+      phi = atan(vy/vx);
+    }else{
+      phi = 0.0;
+    }
+    accessEstimator->feedToTripRecorderRecords(time, px, py, vx, vy, phi, leftDeviation, leftAngle, rightDeviation, rightAngle);
+    time = time + timestep;
   }
+  std::string resultFileName = "result.txt";
+  accessEstimator->saveTripRecorderRecordsToFile(resultFileName);
   cv::imshow("Bird Eye's View with Lane Lines detected", result);
   cv::waitKey(0);
 }

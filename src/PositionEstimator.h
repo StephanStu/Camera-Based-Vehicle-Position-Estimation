@@ -33,6 +33,8 @@ class PositionEstimator : public RecordServer {
     Eigen::VectorXd mapState2Outputs(const Eigen::VectorXd& state); // compute the return of the output-equation "h(x)" the vector [phi deviation]^T
     Eigen::MatrixXd computeJacobian(const Eigen::VectorXd& state); //  compute the Jacobian of the output euqation H = dh(x)/dx
     void getStateVector(Eigen::VectorXd& state); // write the state vector to the referenced variable
+    void saveTripRecorderRecordsToFile(const std::string filename); // enforce a dumpe of the trip recorder's records to a text-file.
+    void feedToTripRecorderRecords(const float& time, const float& px, const float& py, const float& vx, const float& vy, const float& angle, const float& leftDeviation, const float& leftAngle, const float& rightDeviation, const float& rightAngle); // saves quantities in TripRecorderRecord
   private:
     friend class PositionServer;
     void manageStateSwitches(); // this method manages switchs in States =  {initializing, running, freezed, terminated} and calls the appropriate methdos
@@ -63,12 +65,14 @@ class PositionEstimator : public RecordServer {
     Eigen::MatrixXd P; // state covariance matrix
     Eigen::MatrixXd A; // state transition matrix
     Eigen::MatrixXd Q; // process covariance matrix
-    const float deviationVariance = 0.02; // measurement noise variance in deviation in metres
-    const float angleVariance = 0.034; // measurement noise variance in deviation in rad = deg * PI / 180
-    const float velocityVariance = 2.78; // measurement noise variance in velocity in m/s
-    const float accelerationYNoise = 0.25; // variance of acceleration assuming it is a stochastic process with zero mean 
-    const float accelerationXNoise = 2.0; // variance of acceleration assuming it is a stochastic process with zero mean 
+    const float deviationVariance = 0.01; // measurement noise variance in deviation in metres
+    const float angleVariance = 0.017; // measurement noise variance in deviation in rad = deg * PI / 180
+    const float velocityVariance = 1.34; // measurement noise variance in velocity in m/s
+    const float accelerationYNoise = 0.125; // variance of acceleration assuming it is a stochastic process with zero mean 
+    const float accelerationXNoise = 1.0; // variance of acceleration assuming it is a stochastic process with zero mean 
     const float initialVelocity = 88 * 1000/3600; // initial assumption on vehicle velocity = 55 miles per hour
+    std::vector<TripRecorderRecord> tripRecorderRecords; // vector of TripRecorderRecord's collected when in running-state.
+    float time = 0.0; // simualted time in kalmanfilter, used for tracking in trip recorder
 };
 
 #endif

@@ -23,6 +23,19 @@ struct PositionServiceRecord{
   float velocity; // measured in the vehicle, usually by catching wheel rotational speed
 };
 
+struct TripRecorderRecord{
+  float time; // time 
+  float px; // estimated state: position of road vehicle in x-direction 
+  float py; // estimated state: position of road vehicle in y-direction 
+  float vx; // estimated state: velocity of road vehicle in x-direction 
+  float vy; // estimated state: velocity of road vehicle in y-direction 
+  float angle; // derived from estimated state: angle between road vehicle's direction of travelling and the road's center line
+  float leftDeviation; // distance to left lane "measured" in the imge
+  float leftAngle; // angle between road vehicle's direction of travelling and the road's center line, "measured" in image
+  float rightDeviation; // distance to right lane "measured" in the imge
+  float rightAngle; // angle between road vehicle's direction of travelling and the road's center line, "measured" in image
+};
+
 struct Position{
   float deviation;
   float angle;
