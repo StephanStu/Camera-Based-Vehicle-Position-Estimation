@@ -31,6 +31,7 @@ using std::string;
 #define PI 3.14159265
 #define MEANVELOCITY 88 // km/h
 #define VARIANCEVELOCITY 5 // km/h
+#define RUNTIME 15000 // ms
 
 int runHoughTransformationTest(cv::Mat image){
   cv::Mat grayImage; // used for the result of transfroming the RGB-Image to a grayscale-image
@@ -136,7 +137,7 @@ void runWithVideo(const std::string fileName){
   srv->initialize();
   std::this_thread::sleep_for(std::chrono::milliseconds(50));
   srv->run();
-  std::this_thread::sleep_for(std::chrono::milliseconds(10000));
+  std::this_thread::sleep_for(std::chrono::milliseconds(RUNTIME));
   srv->terminate();
 }
 
@@ -220,7 +221,7 @@ void runWithStaticImage(const std::string fileName){
     }
   }
   accessEstimator->initializeKalmanFilter(); 
-  for (size_t i=0; i<100; i++){
+  for (size_t i=0; i<=int(RUNTIME/(timestep*1000)); i++){
     accessEstimator->getStateVector(x);
     accessEstimator->predict(timestep);
     accessVelocitySource->getNextVelocityMeasurement(measurement.velocity);

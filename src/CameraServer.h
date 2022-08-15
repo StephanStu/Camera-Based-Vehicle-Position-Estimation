@@ -34,11 +34,13 @@ class VelocitySource{
 class ImageSource{
   public:
     ImageSource(const std::string nameOfFile);
+    ~ImageSource();
     void getNextImage(cv::Mat& image);
   private:
     void setFileType(const std::string fileName);
     Filetype filetype;
-    std::string filename;  
+    std::string filename;
+    cv::VideoCapture video;
 };
 
 class CameraServer : public RecordServer {

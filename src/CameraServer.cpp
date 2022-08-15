@@ -250,6 +250,10 @@ void ImageSource::setFileType(const std::string fileName){
 ImageSource::ImageSource(const std::string nameOfFile){
   setFileType(nameOfFile);
   filename = nameOfFile;
+  if(filetype == Filetype::mp4){
+    cv::VideoCapture temp(filename); 
+    video = temp;
+  }
 }
 
 void ImageSource::getNextImage(cv::Mat& image){
@@ -257,9 +261,22 @@ void ImageSource::getNextImage(cv::Mat& image){
     image = cv::imread(filename, cv::IMREAD_COLOR);
   }
   if(filetype == Filetype::mp4){
-    image = cv::imread("test/test02.jpg", cv::IMREAD_COLOR);
+    if(!video.isOpened()){
+      std::cout << "Error opening video stream!" << std::endl;
+    }else{
+      video >> image;
+      if (image.empty()){
+        std::cout << "Error pulling image from video stream!" << std::endl;
+      }
+    }
   }
   if(filetype == Filetype::unknown){
     image = cv::imread("test/test02.jpg", cv::IMREAD_COLOR);
+  }
+}
+
+ImageSource::~ImageSource(){
+  if(filetype == Filetype::mp4){
+    video.release();
   }
 }
