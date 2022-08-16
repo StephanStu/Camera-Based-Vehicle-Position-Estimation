@@ -9,6 +9,8 @@ The application is shipped with sample images and sample videos for
 
 in a save (cloud or desktop) Ubuntu-Linux Environment.
 
+The application is "wrapped" in a harness that stimulates it with images and vehicle velocity signals. If someone wants to use the application in a real vehicle the image source and the velocity source must be adapted (both are individual classes with well-defined interfaces, hence the rest of the application is very suitable for re-use). The use-case I have in mind here is to test the estimator after shooting images or videos off-line on a desktop- or cloud-hosted Ubuntu Linux. Hence: The input for the application is an image (filetype: jpg, used for static simualtion) or a video (filetpe: mp4, used for dynamic simulation). These artifacts are defined by the user and passed at the command line. The output is a file (always "result.txt" appears in the folder the executable is located) that holds the simulation time, the estimated state and the "measurements" made in the camera image using image processing methods. All quantities are in SI-Units (metres, seconds, metres/second,...).
+
 ## Dependencies for Running Locally
 This section lists the dependencies of the application &amp how to get them.
 
@@ -28,12 +30,14 @@ This section lists the dependencies of the application &amp how to get them.
   * Linux: Run chmod u+x installEigenLibrary.sh && ./installEigenLibrary.sh 
 
 ## Basic Build Instructions
-This section explains how to build &amp deploy the application.  
+This section explains how to build and deploy the application.  
 
 1. Clone this repo.
 2. Change the directory to the build directory: `cd build`
 3. Compile: `cmake .. && make`
-4. Run it: `./VBRPE relative-path-to-video-or-image-file`, e.g. `./VBRPE test/test02.jpg`
+4. Run it: `./CBPE relative-path-to-video-or-image-file`, e.g. `./CPBE test/test02.jpg`
+
+Note: CBPE is the short form for *Camera-based Position Estimation*.
 
 ## Running the Application
 The application can be run by calling it with a relative path to a suitable video or a relative path to a suitable image.
@@ -47,7 +51,9 @@ The application runs in a multi-threaded mode when parsing a suitable video, oth
 ### Running the Application with a Suitable Image
 To run with a suitable image, switch to /build/ and
 
-TO DO: ADD COMMANDS HERE
+```
+./CBPE test/test02.jpg
+```
 
 A trip is simulated assuming the same image appears again and again in the camera of the vehicle. 
 Find the resulting record of this trip in the same directory as the application: results.txt
@@ -56,30 +62,40 @@ Note: Roughly constant vehicle velocity is assumed, as defined in main.cpp:
 ```cpp
 #define MEANVELOCITY 88 // km/h
 #define VARIANCEVELOCITY 5 // km/h
-#define RUNTIME 15000 // ms
 ```
 
 ### Running the Application with a Suitable Video
 To run with a suitable image, switch to /build/ and
 
-TO DO: ADD COMMANDS HERE
+```
+./CBPE video01.jpg
+```
 
-A trip is simulated drawing video frames at a frequency simulating the camera of the vehicle. 
+A trip is simulated drawing video frames at a constant frequency. This is simulating the camera of the vehicle. 
 Find the resulting record of this trip in the same directory as the application: results.txt
 Note: Roughly constant vehicle velocity is assumed, as defined in main.cpp:
 
-ADD DEFINED HERE
+```cpp
+#define MEANVELOCITY 88 // km/h
+#define VARIANCEVELOCITY 5 // km/h
+```
+
+When submitting a video to the application, the Runtime of the simualtion must be chosen shorter than the length of the video (sorry: I did not build in a stop-request when the video stream stops, so an exception will be thrown when the application runs for too long); the runtime can be parameterized in the main.cpp here:
+
+```cpp
+#define RUNTIME 15000 // ms
+```
 
 ## Requirements
 The following requirements hold:
-* *REQ-ID00*: The position of the vehicle on the road must be updated when a new image becomes available at the source of images of the road in front of the vehicle.
-* *REQ-ID01*: The application must support external start, freeze and termination to be launched and terminated depending on the situation of the raod vehicle (e.g. when off-highway in a suburban area with very curvy roards).
-* *REQ-ID02*: An image of the road in front of the vehicle must be read from an image source and at the same time the vehicle velocity must be captured. These two entities must be saved in a structure at the same time.
-* *REQ-ID03*: An image of the road in front of the vehicle must be undistorted before it is used in downstream image processing.
-* *REQ-ID04*: The undistorted image must be used to detect lanes in the image.
-* *REQ-ID05*: If lanes can be detected in the image, the distance to the center line of the road and the angle of the vehicle w.r.t. the center line of the road must be computed.
-* *REQ-ID06*: Distances and angles computed from images of the road in front of the vehicle must not be used directly by clients of this service; they must but fed into a filter minimizing the effects of noise, processing time and uncertainty in the accuracy of the image processing algorithm. Clients of this service consume the estimated state only.
-* *REQ-ID07*: The trip must be recorded in a file; the file must contain the estimated state, the timestamp and the distances & angles computed with image processing to arrive at the state estimate.
+* **REQ-ID00**: The position of the vehicle on the road must be updated when a new image becomes available at the source of images of the road in front of the vehicle.
+* **REQ-ID01**: The application must support external start, freeze and termination to be launched and terminated depending on the situation of the raod vehicle (e.g. when off-highway in a suburban area with very curvy roards).
+* **REQ-ID02*: An image of the road in front of the vehicle must be read from an image source and at the same time the vehicle velocity must be captured. These two entities must be saved in a structure at the same time.
+* **REQ-ID03**: An image of the road in front of the vehicle must be undistorted before it is used in downstream image processing.
+* **REQ-ID04**: The undistorted image must be used to detect lanes in the image.
+* **REQ-ID05**: If lanes can be detected in the image, the distance to the center line of the road and the angle of the vehicle w.r.t. the center line of the road must be computed.
+* **REQ-ID06**: Distances and angles computed from images of the road in front of the vehicle must not be used directly by clients of this service; they must but fed into a filter minimizing the effects of noise, processing time and uncertainty in the accuracy of the image processing algorithm. Clients of this service consume the estimated state only.
+* **REQ-ID07**: The trip must be recorded in a file; the file must contain the estimated state, the timestamp and the distances & angles computed with image processing to arrive at the state estimate.
 
 ## Architecture & Mapping of Requirements to Software
 
