@@ -75,6 +75,12 @@ Note: Roughly constant vehicle velocity is assumed, as defined in main.cpp:
 #define MEANVELOCITY 88 // km/h
 #define VARIANCEVELOCITY 5 // km/h
 ```
+The application stops and displays a picture similar like the one shown below.
+
+<img src=" grayBirdEyesViewWithLaneLinesDetected.png"/>
+
+The image shows the "Bird Eye's View" of the orignal image provided at the command line with lane lines in black. If you do not see lane lines, no lane lines have been found. 
+Note: The Kalman Filter only updates only if either left- or right-hand-side lane lines can be found in the image. 
 
 ### Running the Application with a Suitable Video
 To run with a suitable image, switch to /build/ and
@@ -173,7 +179,9 @@ The following requirements hold:
 * **REQ-ID07**: The trip must be recorded in a file; the file must contain the estimated state, the timestamp and the distances & angles computed with image processing to arrive at the state estimate.
 
 ## Architecture & Mapping of Requirements to Software
+In the figure below a class diagram of the application is shown.
 
+<img src=" classDiagram.png"/>
 
 ## Literature cited
 [1] D. Simon, Optimal State Estimation: Kalman, H Infinity, and Nonlinear Approaches, find it [here](https://www.amazon.de/Optimal-State-Estimation-Nonlinear-Approaches/dp/0471708585/ref=asc_df_0471708585/?tag=googshopde-21&linkCode=df0&hvadid=310939520557&hvpos=&hvnetw=g&hvrand=11109297407473148806&hvpone=&hvptwo=&hvqmt=&hvdev=c&hvdvcmdl=&hvlocint=&hvlocphy=9042503&hvtargid=pla-466802268421&psc=1&th=1&psc=1&tag=&ref=&adgrpid=61876418295&hvpone=&hvptwo=&hvadid=310939520557&hvpos=&hvnetw=g&hvrand=11109297407473148806&hvqmt=&hvdev=c&hvdvcmdl=&hvlocint=&hvlocphy=9042503&hvtargid=pla-466802268421)
