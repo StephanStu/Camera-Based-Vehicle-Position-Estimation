@@ -94,27 +94,27 @@ Udacity's [C++ Nanodegree](https://www.udacity.com/course/c-plus-plus-nanodegree
 ### Goals for the README.md
 Satisfaction of these goals shows that the author of the application is able to compile a reasonable documentaion and commit it to a public repository.
 
-| Goal          														| Stisfied by    
+| Goal          														| Goal is met by    
 | --------------------------------------------------------------------- | -------------------------------------------------
 | A README with instructions is included with the project   			| This is the README.md.
-| The README indicates which project is chosen.   						| I chosoe to write my own application from scratch.
+| The README indicates which project is chosen.   						| I choose to write my own application from scratch.
 | The README includes information about each rubric point addressed.	| Each point is addressed in this section.		
 
 ### Goals for the Compiling and Testing
 Satisfaction of these goals shows that the author of the application is able to set up CMAKE for a C++-Project and ship an executable.
 
-| Goal          | Stisfied by    
-| ------------- | -------------
-|     xx     |       yy
-|     xx     |       yy
+| Goal          														| Goal is met by    
+| --------------------------------------------------------------------- | ----------------------------------------------------------------------
+| The submission must compile and run.  								| Follow basic build instructions on a machine that has all dependencies.
 
 ### Goals for Loops, Functions and I/Os
 Satisfaction of these goals shows that the author of the application is able to decompose problems into loops and functions that interact with the user (at least over the command line interface).
 
-| Goal          | Stisfied by    
-| ------------- | -------------
-|     xx     |       yy
-|     xx     |       yy
+| Goal          														| Goal is met by    
+| --------------------------------------------------------------------- | -------------------------------------------------
+| The project demonstrates an understanding of C++ functions and control structures.  			| Conditions and loops can be found in every class.
+| The project reads data from a file and process the data, or the program writes data to a file.| Application reads the intrensics.xml & image/video-files and writes the "results.txt" at the end of the run.
+| The project accepts user input and processes the input.										| User provides a video- or image-file with command line input
 
 ### Goals for Object-Oriented Programming
 Satisfaction of these goals shows that the author of the application is able to decompose an abstract problem into classes that work together to provide a solution.
