@@ -51,6 +51,15 @@ Suitable images and videos are part of this repository:
 
 The application runs in a multi-threaded mode when parsing a suitable video, otherwise it runs in a single-threaded mode. Parsing a suitable image is usefull to test convergence of the filter with "perfect" road images.
 
+At the end of each simulation run, a file is created, the "results.txt". Here, the user can find 
+
+* simulation time
+* the estimate of the state: position x on the road, position y on the road, velocity in x-direction, velocity in y-direction.
+* the angle between road center line and the direction the vehicle is heading
+* the "measurements" made in the camera image after transformations
+
+This file can be fed into MATLAB or Python/Numpy for further visualization, e.g. to study how close the driver was following the track.
+
 ### Running the Application with a Suitable Image
 To run with a suitable image, switch to /build/ and
 
@@ -119,10 +128,17 @@ Satisfaction of these goals shows that the author of the application is able to 
 ### Goals for Object-Oriented Programming
 Satisfaction of these goals shows that the author of the application is able to decompose an abstract problem into classes that work together to provide a solution.
 
-| Goal          | Stisfied by    
-| ------------- | -------------
-|     xx     |       yy
-|     xx     |       yy
+| Goal          														| Goal is met by    
+| --------------------------------------------------------------------- | -------------------------------------------------
+| The project uses Object Oriented Programming techniques.			| The application is organized in classes that can be tested individually.
+| Classes use appropriate access specifiers for class members.  						| When necessary I added getter's and setter's.
+| Class constructors utilize member initialization lists.	| When this is possible it is realized, see e.g. RunnableEntity.cpp.
+| Classes abstract implementation details from their interfaces.	| (Public) Interfaces of my classes have meaning full names that tell what they do, further documentation is in the header file.	
+| Classes encapsulate behavior.	| PositionEstimator.h encapsules the Kalman Filter, CameraServer encapsules aquisition of images and merging them with the velocity,...	
+| Classes follow an appropriate inheritance hierarchy.	| RunnableEntity.h is the mother to CameraServer.h, ImageTransformer.h, PositionEstimator.h and PositionServer.h	
+| Overloaded functions allow the same function to operate on different parameters.	| Constructors of PositionEstimator.h and CameraServer.h operate with different number of arguments.
+| Derived class functions override virtual base class functions.	| Childrens of RunnableEntity.h must implement the "run"-method. E.g. is PositionServer.h
+| Templates generalize functions in the project.	| MovableTimestampedType.h is a template that I used to create movable data-structures that track their "age".
 
 ### Goals for Memory Management
 Satisfaction of these goals shows that the author of the application is able to manage the memory and respect the rule of five.
