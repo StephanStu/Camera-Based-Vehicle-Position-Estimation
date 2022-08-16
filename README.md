@@ -103,6 +103,8 @@ When submitting a video to the application, the Runtime of the simualtion must b
 ```cpp
 #define RUNTIME 15000 // ms
 ```
+Note: The many different threads launched are visible in the command window - the application is configured with very verbose logging to allow for debugging.
+ 
 ## How are Udacity's Capstone Project Requirements met?
 Udacity's [C++ Nanodegree](https://www.udacity.com/course/c-plus-plus-nanodegree--nd213) has an "open" capstone project, so students invent an application from scratch that must meet a set of non-functional goals. They are listed below together with the way I chose to meet them.
 
@@ -162,7 +164,7 @@ Satisfaction of these goals shows that the author of the application is able to 
 
 | Goal          																	| Goal is met by    
 | ----------------------------------------------------------------------------------| -------------------------------------------------
-| The project uses multithreading.				| When running with video, execution is mamaged by PositionServer. This manages multiple threads and controls the execution by sending the desired modes to PositionEstimator, CameraServer and ImageTransformer. 
+| The project uses multithreading.				| When running with video, execution is mamaged by PositionServer. This manages multiple threads and controls the execution by sending the desired modes to PositionEstimator, CameraServer and ImageTransformer. The many different threads launched are visible in the command window (the application is configured with verbose logging).
 | A promise and future is used in the project. 										| See RecordServer.h, which is a mother class of e.g. CameraServer.
 | A mutex or lock is used in the project.								| See RecordServer.h, which is a mother class of e.g. CameraServer.	
 | A condition variable is used in the project.												| See RecordServer.h, which is a mother class of e.g. CameraServer.
@@ -179,9 +181,27 @@ The following requirements hold:
 * **REQ-ID07**: The trip must be recorded in a file; the file must contain the estimated state, the timestamp and the distances & angles computed with image processing to arrive at the state estimate.
 
 ## Architecture & Mapping of Requirements to Software
-In the figure below a class diagram of the application is shown.
+In the figure below a class diagram of the application is shown. The core software components that require attention are: CameraServer, ImageTransformer, PositionEstimator and PositionServer.
 
 <img src=" classDiagram.png"/>
+
+The following relationship between software components and requirements holds:
+
+| Software Component       		| Requirements addressed   
+| ------------------------------| ----------------------------
+| PositionServer			    | REQ-ID00, REQ-ID01
+| CameraServer				    | REQ-ID02, REQ-ID03
+| ImageTransformer			    | REQ-ID04
+| PositionEstimator			    | REQ-ID05, REQ-ID06, REQ-ID07
+
+The **PositionServer** abstracts the details and hence provides the service to the terminal customer. It provides interfaces to initialize, run and stop ("terminate") the application.
+
+The **CameraServer** pulls an image from the mounted image source (here: an image or a sequence of frames pulled from a video), merges it with the velocity signal, undistorts the image and keeps it in a thread-safe manner until it is pulled by the next consumer in line, the ImageTransformer.
+
+The **ImageTransformer** pulls the undistorted image from the mounted CameraServer and applies several image processing operations to arrive at the binary bird eye's view. This image is safed in a movable struct along with the velocity and the undistorted raw image until the next consumer in line pulls it in a thread-safe manner, the Position Estimator.
+
+The **PositionEstimator** consumes the binary bird eye's view and determines angles & distances to the center of the lane in the image.
+It is responsible to schedule the Extended Kalman Filter (EKF, see the literature cited) with the correct simulazion time and provide it with the right "measurments" - if there are any. This component also tracks the trip: It holds a vector of state vectors and "measurements" that msut be saved to disc at the end of a trip (here: end of a simulation).
 
 ## Literature cited
 [1] D. Simon, Optimal State Estimation: Kalman, H Infinity, and Nonlinear Approaches, find it [here](https://www.amazon.de/Optimal-State-Estimation-Nonlinear-Approaches/dp/0471708585/ref=asc_df_0471708585/?tag=googshopde-21&linkCode=df0&hvadid=310939520557&hvpos=&hvnetw=g&hvrand=11109297407473148806&hvpone=&hvptwo=&hvqmt=&hvdev=c&hvdvcmdl=&hvlocint=&hvlocphy=9042503&hvtargid=pla-466802268421&psc=1&th=1&psc=1&tag=&ref=&adgrpid=61876418295&hvpone=&hvptwo=&hvadid=310939520557&hvpos=&hvnetw=g&hvrand=11109297407473148806&hvqmt=&hvdev=c&hvdvcmdl=&hvlocint=&hvlocphy=9042503&hvtargid=pla-466802268421)
