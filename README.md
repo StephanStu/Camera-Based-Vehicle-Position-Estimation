@@ -10,7 +10,7 @@ The application is shipped with sample images and sample videos for
 * calibration of the camera - all meta-parameters are tuned with the set of images shipped with this repository
 * dynamic testing and validation of the performance of the EKF with real-world data in a save (cloud or desktop) Ubuntu-Linux Environment
 
-When cloning the repository, the application is "wrapped" in a harness that stimulates it with images and vehicle velocity signals. If someone wants to use the application in a real vehicle the image source (see the aptly named class in CameraServer.h) and the velocity source (see the aptly named class in CameraServer.h) must be adapted: Both are individual classes with well-defined interfaces that can be easily tweaked to consume from real imaging hardware drivers and vehicle network communication stacks like classic or adaptive AUTOSAR. Hence the application is very suitable for re-use. 
+When cloning the repository, the application is "wrapped" in a harness that stimulates it with images and vehicle velocity signals. If someone wants to use the application in a real vehicle the image source (see the aptly named class in CameraServer.h) and the velocity source (see the aptly named class in CameraServer.h) must be adapted: Both are individual classes with well-defined interfaces that can be easily tweaked to consume from real imaging hardware drivers and vehicle network communication stacks like classic or adaptive [AUTOSAR](www.autosar.org). Hence the application is very suitable for re-use. 
 
 The use-case implemented here (and ready to try at home!) is to test the EKF with Software-in-the-Loop, after shooting images or videos on the raod and postprocess in a save manner off-line on a desktop- or cloud-hosted Ubuntu Linux. Hence: The input for the application here is an image (filetype: jpg, used for static simualtion) or a video (filetpe: mp4, used for dynamic simulation). These artifacts are defined by the user and passed at the command line. The output of the application is a result file (aptly named "result.txt") that appears in the folder the executable is located in after the off-line simualtion run. The file holds the simulation/recorded time, the estimated state (x-position, y-position, x-velociyt, y-velocity), the angle and the "measurements" made in the camera image using image processing methods (see the title figure for coordinates and definition of the angle). All quantities are saved to file in SI-Units (metres, seconds, metres/second,...).
 
@@ -196,14 +196,60 @@ The following relationship between software components and requirements holds:
 | ImageTransformer			    | REQ-ID04
 | PositionEstimator			    | REQ-ID05, REQ-ID06, REQ-ID07
 
-The **PositionServer** abstracts the details and hence provides the service to the terminal customer. It provides interfaces to initialize, run and stop ("terminate") the application.
+The **PositionServer** abstracts the details and hence provides the service to the terminal customer. It provides interfaces to initialize, run and stop ("terminate") the application. The PositionServer creates instances of a *CameraServer*, an *ImageTransformer* and a *PositionEstimator* and launches necessary threads. When the customer switches to the "initialize"-state, from the "initialize"-state to the "run"-state or from the "run"-state to the "terminated"-state, PositionServer controls the execution by imposing states on individual software components - in the right order. 
 
-The **CameraServer** pulls an image from the mounted image source (here: an image or a sequence of frames pulled from a video), merges it with the velocity signal, undistorts the image and keeps it in a thread-safe manner until it is pulled by the next consumer in line, the ImageTransformer.
+The **CameraServer** pulls an image from the mounted image source (here: an image or a sequence of frames pulled from a video), merges it with the velocity signal, undistorts the image and puts all reuslts in movable record that features tracking of it's age - the age is needed later when running the Extended Kalman Filter. The movable record is created in a thread-safe manner until it is pulled by the next consumer in line, the *ImageTransformer*.
 
-The **ImageTransformer** pulls the undistorted image from the mounted CameraServer and applies several image processing operations to arrive at the binary bird eye's view. This image is safed in a movable struct along with the velocity and the undistorted raw image until the next consumer in line pulls it in a thread-safe manner, the Position Estimator.
+The **ImageTransformer** pulls the movable record and uses the undistorted image from the mounted CameraServer in a sequence of image processing operations to arrive at the binary bird eye's view. The intermediate results are added to the movable record without rendering the age of the record (for debugging or saving them as a video later). With the binary bird eye's view being ready, the movable record is waiting to be pulled by the next consumer in line in a thread-safe manner, the *PositionEstimator*.
 
-The **PositionEstimator** consumes the binary bird eye's view and determines angles & distances to the center of the lane in the image.
-It is responsible to schedule the Extended Kalman Filter (EKF, see the literature cited) with the correct simulazion time and provide it with the right "measurments" - if there are any. This component also tracks the trip: It holds a vector of state vectors and "measurements" that msut be saved to disc at the end of a trip (here: end of a simulation).
+The **PositionEstimator** consumes movable record and uses the binary bird eye's view to determines angles & distances to the center of the lane in the image. The core operation here is the Hough-Transformation: Given a set of meta-parameters, lines in the image are identified as lane lines. Using trigonomoetric functions, one can derive the distance to the center lines and angle of the road vehicle.
+This software component is responsible to schedule the Extended Kalman Filter (EKF, see the literature cited) with the correct simulation time and provide it with the right "measurments" - if there are any: The Hough Transformation might not always deliver a lane line, there might be too much "noise in the computer vision" or artifacts that may lead to false assumptions on distances like trailers being identified as lane lines. The correct simulation time is derived from the age of the movable record: The time it takes from it's initial creation to consumption of "measurments" in the EKF. This may vary due to processor load and can be observed in the command line output (we are not running on an RTOS giving fixed execution times!). The EKF handles this by adapting the timestep in the prediction-phase of the algorithm. 
+This software component also tracks the trip: It holds a vector of state vectors and "measurements" that must be saved to disc at the end of a trip (here: end of a simulation) for further analysis. The result-file ("results.txt" is found in the build-folder) is a convenient csv-file.
+
+## The Mechanics of the Producer-Consumer-Middleware
+This application implements a service-oriented, "producer-consumer"-middleware. It is realized by **RecordServer** using a condition variable and a mutex to protect access to the object of interest: The movable record containing images, states and measurements.
+
+## The Extended Kalman-Filter for Tracking the State of the Road Vehicle
+The EKF is implemented completely in **PositionEstimator**. Those who are familiar with the matter will recognize the equations in PositionEstimator.cpp, like the *prediction*-step:
+
+```cpp
+void PositionEstimator::predict(const float timestep){
+  ...
+  computeStateTransitionMatrix(timestep);
+  computeProcessCovariancenMatrix(timestep);
+  x = A * x;
+  Eigen::MatrixXd At = A.transpose();
+  P = A * P * At + Q;
+}
+```
+
+and the *update*-step:
+
+```cpp
+void PositionEstimator::update(const Measurement& measurement){
+  ...
+  z = Eigen::VectorXd(3);
+  z << measurement.deviation, measurement.angle, measurement.velocity;
+  Eigen::MatrixXd H(3, 4); // TO DO
+  H = computeJacobian(x);
+  Eigen::MatrixXd R(3, 3);
+  R << deviationVariance, 0,  0, // variance in deviation (m)
+       0, angleVariance, 0, // variance in angle (rad)
+       0, 0, velocityVariance; // variance in velocity (m/s)
+  Eigen::VectorXd y = z - mapState2Outputs(x);
+  ...
+  Eigen::MatrixXd Ht = H.transpose();
+  Eigen::MatrixXd S = H * P * Ht + R;
+  Eigen::MatrixXd Si = S.inverse();
+  Eigen::MatrixXd K = P * Ht * Si;
+  x = x + (K * y);
+  int dimension_of_x = x.size();
+  Eigen::MatrixXd I = Eigen::MatrixXd::Identity(dimension_of_x, dimension_of_x);
+  P = (I - K * H) * P;
+}
+```
+The derivation of these equations are left to the literature cited. Here we quickly go through the state equations and the measurement equations.
+
 
 ## Literature cited
 [1] D. Simon, Optimal State Estimation: Kalman, H Infinity, and Nonlinear Approaches, find it [here](https://www.amazon.de/Optimal-State-Estimation-Nonlinear-Approaches/dp/0471708585/ref=asc_df_0471708585/?tag=googshopde-21&linkCode=df0&hvadid=310939520557&hvpos=&hvnetw=g&hvrand=11109297407473148806&hvpone=&hvptwo=&hvqmt=&hvdev=c&hvdvcmdl=&hvlocint=&hvlocphy=9042503&hvtargid=pla-466802268421&psc=1&th=1&psc=1&tag=&ref=&adgrpid=61876418295&hvpone=&hvptwo=&hvadid=310939520557&hvpos=&hvnetw=g&hvrand=11109297407473148806&hvqmt=&hvdev=c&hvdvcmdl=&hvlocint=&hvlocphy=9042503&hvtargid=pla-466802268421)
