@@ -103,50 +103,53 @@ Udacity's [C++ Nanodegree](https://www.udacity.com/course/c-plus-plus-nanodegree
 ### Goals for the README.md
 Satisfaction of these goals shows that the author of the application is able to compile a reasonable documentaion and commit it to a public repository.
 
-| Goal          														| Goal is met by    
-| --------------------------------------------------------------------- | -------------------------------------------------
-| A README with instructions is included with the project   			| This is the README.md.
-| The README indicates which project is chosen.   						| I choose to write my own application from scratch.
-| The README includes information about each rubric point addressed.	| Each point is addressed in this section.		
+| Goal          																	| Goal is met by    
+| ----------------------------------------------------------------------------------| -------------------------------------------------
+| A README with instructions is included with the project   						| This is the README.md.
+| The README indicates which project is chosen.   									| I choose to write my own application from scratch.
+| The README includes information about each rubric point addressed.				| Each point is addressed in this section.		
 
 ### Goals for the Compiling and Testing
 Satisfaction of these goals shows that the author of the application is able to set up CMAKE for a C++-Project and ship an executable.
 
-| Goal          														| Goal is met by    
-| --------------------------------------------------------------------- | ----------------------------------------------------------------------
-| The submission must compile and run.  								| Follow basic build instructions on a machine that has all dependencies.
+| Goal          																	| Goal is met by    
+| ----------------------------------------------------------------------------------| ----------------------------------------------------------------------
+| The submission must compile and run.  											| Follow basic build instructions on a machine that has all dependencies.
 
 ### Goals for Loops, Functions and I/Os
 Satisfaction of these goals shows that the author of the application is able to decompose problems into loops and functions that interact with the user (at least over the command line interface).
 
-| Goal          														| Goal is met by    
-| --------------------------------------------------------------------- | -------------------------------------------------
-| The project demonstrates an understanding of C++ functions and control structures.  			| Conditions and loops can be found in every class.
-| The project reads data from a file and process the data, or the program writes data to a file.| Application reads the intrensics.xml & image/video-files and writes the "results.txt" at the end of the run.
-| The project accepts user input and processes the input.										| User provides a video- or image-file with command line input
+| Goal          																	| Goal is met by    
+| ----------------------------------------------------------------------------------| -------------------------------------------------
+| The project demonstrates an understanding of C++ functions and control structures.| Conditions and loops can be found in every class.
+| The project reads data from a file or the program writes data to a file.			| Application reads the intrensics.xml & image/video-files and writes the "results.txt" at the end of the run.
+| The project accepts user input and processes the input.							| User provides a video- or image-file with command line input
 
 ### Goals for Object-Oriented Programming
 Satisfaction of these goals shows that the author of the application is able to decompose an abstract problem into classes that work together to provide a solution.
-
-| Goal          														| Goal is met by    
-| --------------------------------------------------------------------- | -------------------------------------------------
-| The project uses Object Oriented Programming techniques.			| The application is organized in classes that can be tested individually.
-| Classes use appropriate access specifiers for class members.  						| When necessary I added getter's and setter's.
-| Class constructors utilize member initialization lists.	| When this is possible it is realized, see e.g. RunnableEntity.cpp.
-| Classes abstract implementation details from their interfaces.	| (Public) Interfaces of my classes have meaning full names that tell what they do, further documentation is in the header file.	
-| Classes encapsulate behavior.	| PositionEstimator.h encapsules the Kalman Filter, CameraServer encapsules aquisition of images and merging them with the velocity,...	
-| Classes follow an appropriate inheritance hierarchy.	| RunnableEntity.h is the mother to CameraServer.h, ImageTransformer.h, PositionEstimator.h and PositionServer.h	
+| Goal          																	| Goal is met by    
+| ----------------------------------------------------------------------------------| -------------------------------------------------
+| The project uses Object Oriented Programming techniques.							| The application is organized in classes that can be tested individually.
+| Classes use appropriate access specifiers for class members.  					| When necessary I added getter's and setter's.
+| Class constructors utilize member initialization lists.							| When this is possible it is realized, see e.g. RunnableEntity.cpp.
+| Classes abstract implementation details from their interfaces.					| (Public) Interfaces of my classes have meaning full names that tell what they do, further documentation is in the header file.	
+| Classes encapsulate behavior.														| PositionEstimator.h encapsules the Kalman Filter, CameraServer encapsules aquisition of images and merging them with the velocity,...	
+| Classes follow an appropriate inheritance hierarchy.								| RunnableEntity.h is the mother to CameraServer.h, ImageTransformer.h, PositionEstimator.h and PositionServer.h	
 | Overloaded functions allow the same function to operate on different parameters.	| Constructors of PositionEstimator.h and CameraServer.h operate with different number of arguments.
-| Derived class functions override virtual base class functions.	| Childrens of RunnableEntity.h must implement the "run"-method. E.g. is PositionServer.h
-| Templates generalize functions in the project.	| MovableTimestampedType.h is a template that I used to create movable data-structures that track their "age".
+| Derived class functions override virtual base class functions.					| Childrens of RunnableEntity.h must implement the "run"-method. E.g. is PositionServer.h
+| Templates generalize functions in the project.									| MovableTimestampedType.h is a template that I used to create movable data-structures that track their "age".
 
 ### Goals for Memory Management
 Satisfaction of these goals shows that the author of the application is able to manage the memory and respect the rule of five.
 
-| Goal          | Stisfied by    
-| ------------- | -------------
-|     xx     |       yy
-|     xx     |       yy
+| Goal          																	| Goal is met by    
+| ----------------------------------------------------------------------------------| -------------------------------------------------
+| The project makes use of references in function declarations.						| This is the README.md.
+| The project uses destructors appropriately.  										| I choose to write my own application from scratch.
+| The project uses scope / RAII where appropriate.									| Each point is addressed in this section.	
+| The project follows the Rule of 5.												| Each point is addressed in this section.	
+| The project uses move semantics instead of copying data, where possible.			| Each point is addressed in this section.	
+| The project uses smart pointers instead of raw pointers.							| Each point is addressed in this section.	
 
 ### Goals for Concurrency
 Satisfaction of these goals shows that the author of the application is able to create multi-threaded programms that utilize processing power of contemporary hardware well.
