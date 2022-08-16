@@ -94,10 +94,11 @@ Udacity's [C++ Nanodegree](https://www.udacity.com/course/c-plus-plus-nanodegree
 ### Goals for the README.md
 Satisfaction of these goals shows that the author of the application is able to compile a reasonable documentaion and commit it to a public repository.
 
-| Goal          | Stisfied by    
-| ------------- | -------------
-|     xx     |       yy
-|     xx     |       yy
+| Goal          														| Stisfied by    
+| --------------------------------------------------------------------- | -------------------------------------------------
+| A README with instructions is included with the project   			| This is the README.md.
+| The README indicates which project is chosen.   						| I chosoe to write my own application from scratch.
+| The README includes information about each rubric point addressed.	| Each point is addressed in this section.		
 
 ### Goals for the Compiling and Testing
 Satisfaction of these goals shows that the author of the application is able to set up CMAKE for a C++-Project and ship an executable.
