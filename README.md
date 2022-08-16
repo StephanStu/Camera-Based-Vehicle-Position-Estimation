@@ -248,6 +248,7 @@ void PositionEstimator::update(const Measurement& measurement){
   P = (I - K * H) * P;
 }
 ```
+
 The derivation of these equations are left to the literature cited. Here we quickly go through the state equations and the measurement equations.
 A reoad vehicle with front camera (usually hidden behind the central mirror) is considered as displayed below.
 
@@ -262,7 +263,66 @@ The gray part of the image above resembles the bird eye's view that can be compu
 * the distance to the center of the lane, knowing the road width (12 feet in the US)
 * the angle the vehicle is heading w.r.t. the center line of the road
 
-What a driver (or autonomous driving system) will do is to steer the vehicle "into the zero" - zero deviation from center line and zero angle between where the vehicle is heading and the center line. Hence it is of interest to determine the state - position and velocity of the road vehicle - and feed this back to either the driver or an auto-pilot at a reasonable rate.
+What a driver (or autonomous driving system) will do is to steer the vehicle "into the zero" - zero deviation from center line and zero angle between where the vehicle is heading and the center line. Hence it is of interest to determine the state - position and velocity of the road vehicle - and feed this back to either the driver or an auto-pilot at a reasonable rate. To arrive at this information, the Extended Kalman Filter is used:
+
+<img src=" equationsEKF.png" width="440"/>
+
+Note that the motion of the road vehicle can be described by a set of linear difference equations,
+
+<img src=" equationsState.png" width="440"/>
+
+In the set of equations above, the accelerations in x- and y-directions are assumed to be zero-mean gaussian white noise - an approximation of the real driver's behavior but one that works well when crusing on a highway. With that assumption the matrix Q becomes
+
+<img src=" matrixQ.png" width="440"/>
+
+Considering the outputs to be i) deviation from center, ii) angle and iii) road vehicle velocity, one can determine the remaining non-linear equations and the Jacobian. In PositionEstimator.cpp, the output equations are implemented as follows
+
+```cpp
+Eigen::VectorXd PositionEstimator::mapState2Outputs(const Eigen::VectorXd& state){
+  Eigen::VectorXd z(3);
+  float py = state(1);
+  float vx = state(2);
+  float vy = state(3);
+  float phi;
+  ...
+  phi = atan(vy/vx);
+  ...
+  float v = sqrt(vx*vx + vy*vy);
+  z << py, phi, v;
+  return z;
+}
+```
+
+The Jacobian is the derivative of the output equations w.r.t. the state variables, implemented like this
+
+```cpp
+Eigen::MatrixXd PositionEstimator::computeJacobian(const Eigen::VectorXd& state){
+  ...
+  float vx = state(2);
+  float vy = state(3);
+  float temp = (vx*vx) + (vy*vy);
+  Eigen::MatrixXd H(3, 4);
+  H << 0, 1, 0, 0, // [dh1(x)/dpx dh1(x)/dpy dh1(x)/dvx dh1(x)/dvy] with h1 = py = distance to center lane (normal to roadcenter line)
+       0, 0, -vy/temp, vx/temp, // [dh2(x)/dpx dh2(x)/dpy dh2(x)/dvx dh2(x)/dvy] with h2 = phi = angle between direction of traveling & center lane ("+" = twist to the right)
+       0, 0, vx/sqrt(temp), vy/sqrt(temp); // [dh3(x)/dpx dh3(x)/dpy dh3(x)/dvx dh3(x)/dvy] with h3 = velocity = length of the velocity vector
+  return H; 
+}
+```
+
+The software component uses the Hough-Transformation to extract lines in the binary bird eye's image. After deciding if a line is valid, (left or right) lane line, the distance and the angle are computed and used as "mesurements" in the update-step of the filter. The velocit is assumed to be pulled as a measurement from the vehicle network. In the application, this is stubbed by a class VelocitySource (see CameraServer.h):
+
+```cpp
+class VelocitySource{
+  public:
+    VelocitySource(const int meanVelocity, const int varianceVelocity); // constructor
+    void getNextVelocityMeasurement(float& velocityMeasurement); // provides a random velocity measuement (in m/s)
+  private:
+    int mean; // velocity mean in km/h
+    int variance; // velocity variance in km/h
+};
+```
+
+When pulling a velocity from that class, a random signal is generated with the mean being equal to meanVelocity. This completes the seection on the Extended Kalman Filter.
 
 ## Literature cited
 [1] D. Simon, Optimal State Estimation: Kalman, H Infinity, and Nonlinear Approaches, find it [here](https://www.amazon.de/Optimal-State-Estimation-Nonlinear-Approaches/dp/0471708585/ref=asc_df_0471708585/?tag=googshopde-21&linkCode=df0&hvadid=310939520557&hvpos=&hvnetw=g&hvrand=11109297407473148806&hvpone=&hvptwo=&hvqmt=&hvdev=c&hvdvcmdl=&hvlocint=&hvlocphy=9042503&hvtargid=pla-466802268421&psc=1&th=1&psc=1&tag=&ref=&adgrpid=61876418295&hvpone=&hvptwo=&hvadid=310939520557&hvpos=&hvnetw=g&hvrand=11109297407473148806&hvqmt=&hvdev=c&hvdvcmdl=&hvlocint=&hvlocphy=9042503&hvtargid=pla-466802268421)
