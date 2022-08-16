@@ -1,6 +1,6 @@
 # Camera-based Vehicle-Position-Estimation
 
-<img src="titlePicture.png"/>
+<img src="cameraBasedPositionEstimationOverviewGraphics.png"/>
 
 This is my capstone project in Udacity's C++ Nanodegree Program. This project contains an application that estimates the position of a road vehicle as it travels on a highway. The application generates an estimate of the state of the vehicle that may be fed to a driver assistant system or may be part of an autonomous driving system: An extended Kalman Filter estimates the position on the road and the velocities using "measurements" taken from a simple camera image. The architecture of this application is service-oriented, suitable for (Ubuntu) Linux and uses OpenCV and the Eigen-Library.
 
