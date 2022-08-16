@@ -265,11 +265,11 @@ The gray part of the image above resembles the bird eye's view that can be compu
 
 What a driver (or autonomous driving system) will do is to steer the vehicle "into the zero" - zero deviation from center line and zero angle between where the vehicle is heading and the center line. Hence it is of interest to determine the state - position and velocity of the road vehicle - and feed this back to either the driver or an auto-pilot at a reasonable rate. To arrive at this information, the Extended Kalman Filter is used:
 
-<img src=" equationsEKF.png" width="440"/>
+<img src=" equationsEKF.png" width="240"/>
 
 Note that the motion of the road vehicle can be described by a set of linear difference equations,
 
-<img src=" equationsState.png" width="440"/>
+<img src=" equationsState.png" width="240"/>
 
 In the set of equations above, the accelerations in x- and y-directions are assumed to be zero-mean gaussian white noise - an approximation of the real driver's behavior but one that works well when crusing on a highway. With that assumption the matrix Q becomes
 
