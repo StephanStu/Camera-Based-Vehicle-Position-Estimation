@@ -11,6 +11,7 @@
 
 /*
 PositionEstimator:
+This software components is responsible for providing the estimated state of the road vehicle in 2D-Road-Corrdinates (x is the direction of traveling and y is perpendicular to it pointing to the right). This software component is also responsible for keeping a record of the state and the "measurmeents" made in the image provided.
 */
 
 class PositionEstimator : public RecordServer {

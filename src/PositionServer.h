@@ -10,6 +10,25 @@
 
 /*
 PositionServer:
+This software component is responsible to schedule execution of the application end:end. It must launch the threads needed and control the execution by switching the modes as requested by external interfaces "run()", "initialize()", "freeze()" and "terminate()". This software component coordinates launching and killing threads in e.g. the PositionEstimator. The user uses only the external interfaces and should not worry about how to use the service in detail. This services can be created and used as follows:
+
+  std::unique_ptr<PositionServer> srv(new PositionServer(Debuglevel::verbose)); // create it
+  
+  std::shared_ptr<VelocitySource> accessVelocitySource(new VelocitySource(MEANVELOCITY, VARIANCEVELOCITY)); // create the velocity-source and mount it
+  srv->mountVelocitySource(accessVelocitySource);
+  
+  std::shared_ptr<ImageSource> accessImageSource(new ImageSource(fileName)); // create the image source and mount it
+  srv->mountImageSource(accessImageSource);
+  
+  // use the external interface to initialize
+  srv->initialize();
+  // you may wait a while...
+  std::this_thread::sleep_for(std::chrono::milliseconds(50));
+  // use the external interface to run
+  srv->run();
+  std::this_thread::sleep_for(std::chrono::milliseconds(RUNTIME));
+  // use the external interface to stop
+  srv->terminate();
 */
 
 class PositionServer : public RunnableEntity {

@@ -9,6 +9,9 @@
 
 /*
 RunnableEnitity:
+This is the base class for all entities that must launch threads to provide their services.
+It protects the console and allows thread-safe printing of messages.
+It keeps the sate of the component and offers an interface to manipulate it.
 */
 
 class RunnableEntity{

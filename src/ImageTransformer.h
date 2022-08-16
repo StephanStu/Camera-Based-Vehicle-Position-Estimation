@@ -8,6 +8,8 @@
 
 /*
 ImageTransformer:
+This software component is responsible for consuming an undistorted image and computing the gray bird eye's view from that input.
+This software component holds all meta-parameter, e.g. kernelsize to get the job done.
 */
 
 class ImageTransformer : public RecordServer {
