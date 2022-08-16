@@ -251,13 +251,13 @@ void PositionEstimator::update(const Measurement& measurement){
 The derivation of these equations are left to the literature cited. Here we quickly go through the state equations and the measurement equations.
 A reoad vehicle with front camera (usually hidden behind the central mirror) is considered as displayed below.
 
-<img src=" roadVehicleWithFrontCamera.png" width="240"/>
+<img src=" roadVehicleWithFrontCamera.png" width="440"/>
 
 In the following the road is considered *locally* straight. This is a save assumptions on most highways. Exceptions are ramps. So when approaching a ramp, the application must be stopped or freezed (hence, the external interfaces provided by PositionServer!) and moved back to the running-state when assumptions are met again. The assumption of a *locally* straight lane with lane lines translates into a model that might be visualized like below.
 
-<img src=" topLevelViewStraightRoad.png" width="240"/>
+<img src=" topLevelViewStraightRoad.png" width="440"/>
 
-The gray part of the image above resembles the bird eye's view that can be computed with OpenCV's image processing library; it shows that part of the road is visible "from above". Very close to the bottom of the transformed image the distortion is low and one can use the points where the lane lines intersect with the bottom to determine
+The gray part of the image above resembles the bird eye's view that can be computed with OpenCV's image processing library; it shows the part of the road, which is visible "from above" when transforming the camera image. Very close to the bottom of the transformed camera image the distortion is low and one can use the points where the lane lines intersect with the bottom to determine
 
 * the distance to the center of the lane, knowing the road width (12 feet in the US)
 * the angle the vehicle is heading w.r.t. the center line of the road
