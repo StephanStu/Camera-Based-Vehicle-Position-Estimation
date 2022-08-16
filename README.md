@@ -85,6 +85,56 @@ When submitting a video to the application, the Runtime of the simualtion must b
 ```cpp
 #define RUNTIME 15000 // ms
 ```
+## How are Udacity's Capstone Project Requirements met?
+Udacity's [C++ Nanodegree](https://www.udacity.com/course/c-plus-plus-nanodegree--nd213) has an "open" capstone project, so students invent an application from scratch that must meet a set of non-functional goals. They are listed below together with the way I chose to meet them.
+
+### Goals for the README.md
+Satisfaction of these goals shows that the author of the application is able to compile a reasonable documentaion and commit it to a public repository.
+
+| Goal          | Stisfied by    
+| ------------- | -------------
+|     xx     |       yy
+|     xx     |       yy
+
+### Goals for the Compiling and Testing
+Satisfaction of these goals shows that the author of the application is able to set up CMAKE for a C++-Project and ship an executable.
+
+| Goal          | Stisfied by    
+| ------------- | -------------
+|     xx     |       yy
+|     xx     |       yy
+
+### Goals for Loops, Functions and I/Os
+Satisfaction of these goals shows that the author of the application is able to decompose problems into loops and functions that interact with the user (at least over the command line interface).
+
+| Goal          | Stisfied by    
+| ------------- | -------------
+|     xx     |       yy
+|     xx     |       yy
+
+### Goals for Object-Oriented Programming
+Satisfaction of these goals shows that the author of the application is able to decompose an abstract problem into classes that work together to provide a solution.
+
+| Goal          | Stisfied by    
+| ------------- | -------------
+|     xx     |       yy
+|     xx     |       yy
+
+### Goals for Memory Management
+Satisfaction of these goals shows that the author of the application is able to manage the memory and respect the rule of five.
+
+| Goal          | Stisfied by    
+| ------------- | -------------
+|     xx     |       yy
+|     xx     |       yy
+
+### Goals for Concurrency
+Satisfaction of these goals shows that the author of the application is able to create multi-threaded programms that utilize processing power of contemporary hardware well.
+
+| Goal          | Stisfied by    
+| ------------- | -------------
+|     xx     |       yy
+|     xx     |       yy
 
 ## Requirements
 The following requirements hold:
@@ -101,5 +151,4 @@ The following requirements hold:
 
 
 ## Literature cited
-[1] B.Anbarasu  &amp G.Anitha, Vision-based runway recognition and position estimation for UAV
-autonomous landing, find it [here](https://papers.ssrn.com/sol3/papers.cfm?abstract_id=2792686)
+[1] D. Simon, Optimal State Estimation: Kalman, H Infinity, and Nonlinear Approaches, find it [here](https://www.amazon.de/Optimal-State-Estimation-Nonlinear-Approaches/dp/0471708585/ref=asc_df_0471708585/?tag=googshopde-21&linkCode=df0&hvadid=310939520557&hvpos=&hvnetw=g&hvrand=11109297407473148806&hvpone=&hvptwo=&hvqmt=&hvdev=c&hvdvcmdl=&hvlocint=&hvlocphy=9042503&hvtargid=pla-466802268421&psc=1&th=1&psc=1&tag=&ref=&adgrpid=61876418295&hvpone=&hvptwo=&hvadid=310939520557&hvpos=&hvnetw=g&hvrand=11109297407473148806&hvqmt=&hvdev=c&hvdvcmdl=&hvlocint=&hvlocphy=9042503&hvtargid=pla-466802268421)
