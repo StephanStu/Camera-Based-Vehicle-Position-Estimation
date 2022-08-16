@@ -249,7 +249,13 @@ void PositionEstimator::update(const Measurement& measurement){
 }
 ```
 The derivation of these equations are left to the literature cited. Here we quickly go through the state equations and the measurement equations.
+A reoad vehicle with front camera (usually hidden behind the central mirror) is considered as displayed below.
 
+<img src=" roadVehicleWithFrontCamera.png"/>
+
+In the following the road is considered *locally* straight. This is a save assumptions on most highways. Exceptions are ramps. So when approaching a ramp, the application must be stopped or freezed (hence, the external interfaces provided by PositionServer!) and moved back to the running-state when assumptions are met again. The assumption of a *locally* straight lane with lane lines translates into a model that might be visualized like below.
+
+<img src=" topLevelViewStraightRoad.png"/>
 
 ## Literature cited
 [1] D. Simon, Optimal State Estimation: Kalman, H Infinity, and Nonlinear Approaches, find it [here](https://www.amazon.de/Optimal-State-Estimation-Nonlinear-Approaches/dp/0471708585/ref=asc_df_0471708585/?tag=googshopde-21&linkCode=df0&hvadid=310939520557&hvpos=&hvnetw=g&hvrand=11109297407473148806&hvpone=&hvptwo=&hvqmt=&hvdev=c&hvdvcmdl=&hvlocint=&hvlocphy=9042503&hvtargid=pla-466802268421&psc=1&th=1&psc=1&tag=&ref=&adgrpid=61876418295&hvpone=&hvptwo=&hvadid=310939520557&hvpos=&hvnetw=g&hvrand=11109297407473148806&hvqmt=&hvdev=c&hvdvcmdl=&hvlocint=&hvlocphy=9042503&hvtargid=pla-466802268421)
