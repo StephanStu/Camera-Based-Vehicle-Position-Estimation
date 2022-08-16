@@ -1,7 +1,7 @@
 cmake_minimum_required(VERSION 3.11.3)
 
 # set(CMAKE_CXX_STANDARD 17)
-project(traffic_simulation)
+project(camera_based_vehicle_position_estimation)
 set(CMAKE_CXX_FLAGS "${CMAKE_CXX_FLAGS} -std=c++17 -pthread")
 
 find_package(OpenCV 4.1 REQUIRED)
@@ -14,5 +14,5 @@ add_definitions(${OpenCV_DEFINITIONS})
 file(GLOB project_SRCS src/*.cpp) #src/*.h
 
 # Add project executable
-add_executable(VBRPE ${project_SRCS})
-target_link_libraries(VBRPE ${OpenCV_LIBRARIES})
+add_executable(CBPE ${project_SRCS})
+target_link_libraries(CBPE ${OpenCV_LIBRARIES})
