@@ -144,12 +144,12 @@ Satisfaction of these goals shows that the author of the application is able to 
 
 | Goal          																	| Goal is met by    
 | ----------------------------------------------------------------------------------| -------------------------------------------------
-| The project makes use of references in function declarations.						| This is the README.md.
-| The project uses destructors appropriately.  										| I choose to write my own application from scratch.
-| The project uses scope / RAII where appropriate.									| Each point is addressed in this section.	
-| The project follows the Rule of 5.												| Each point is addressed in this section.	
-| The project uses move semantics instead of copying data, where possible.			| Each point is addressed in this section.	
-| The project uses smart pointers instead of raw pointers.							| Each point is addressed in this section.	
+| The project makes use of references in function declarations.						| See, e.g. PositionEstimator.h, line 37.
+| The project uses destructors appropriately.  										| See MovableTimestampedType.h and CameraServer.h (see ImageSource, the destructor closes the video-file)
+| The project uses scope / RAII where appropriate.									| PositionServer.h holds & manages the other classes (with smart pointers).	
+| The project follows the Rule of 5.												| See MovableTimestampedType.h 
+| The project uses move semantics instead of copying data, where possible.			| See examples for application of move-semantics in RecordServer.h, sending the record is done by moving it.	
+| The project uses smart pointers instead of raw pointers.							| EPositionServer.h holds & manages the other classes (with smart pointers).		
 
 ### Goals for Concurrency
 Satisfaction of these goals shows that the author of the application is able to create multi-threaded programms that utilize processing power of contemporary hardware well.
