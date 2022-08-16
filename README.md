@@ -154,12 +154,14 @@ Satisfaction of these goals shows that the author of the application is able to 
 ### Goals for Concurrency
 Satisfaction of these goals shows that the author of the application is able to create multi-threaded programms that utilize processing power of contemporary hardware well.
 
-| Goal          | Stisfied by    
-| ------------- | -------------
-|     xx     |       yy
-|     xx     |       yy
+| Goal          																	| Goal is met by    
+| ----------------------------------------------------------------------------------| -------------------------------------------------
+| The project uses multithreading.				| When running with video, execution is mamaged by PositionServer. This manages multiple threads and controls the execution by sending the desired modes to PositionEstimator, CameraServer and ImageTransformer. 
+| A promise and future is used in the project. 										| See RecordServer.h, which is a mother class of e.g. CameraServer.
+| A mutex or lock is used in the project.								| See RecordServer.h, which is a mother class of e.g. CameraServer.	
+| A condition variable is used in the project.												| See RecordServer.h, which is a mother class of e.g. CameraServer.
 
-## Requirements
+## Functional Requirements of the Application
 The following requirements hold:
 * **REQ-ID00**: The position of the vehicle on the road must be updated when a new image becomes available at the source of images of the road in front of the vehicle.
 * **REQ-ID01**: The application must support external start, freeze and termination to be launched and terminated depending on the situation of the raod vehicle (e.g. when off-highway in a suburban area with very curvy roards).
