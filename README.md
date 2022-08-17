@@ -233,7 +233,9 @@ void RecordServer::sendRecord(std::promise<MovableTimestampedType<PositionServic
 ```
 Moreover, the condition variable tells other threads to wait for access and notifies when the resource becomes available again. This a solution to the "Producer-Consumer-Problem", which occurs frequently [2]: A consumer is waiting for a producer of information, goods, engergy...to become available and is idling while it's inventory is empty. Here the sequence of producers and consumers is as follows:
 
+<img src=" producerConsumerInCBPE.png"/>
 
+The figure illustrates how the record moves from one software component to the next in a service-oriented manner. Each software component contributes to the content of the record. Ultimately PositionEstimator consumes a subset of the infomation contained in the record (the binary bird eye's view, the record's age and the vehicle's velocity) to give an estimate of the state of the road vehicle.
 
 ## The Extended Kalman-Filter for Tracking the State of the Road Vehicle
 The EKF is implemented completely in **PositionEstimator**. Those who are familiar with the matter will recognize the equations in PositionEstimator.cpp, like the *prediction*-step:
@@ -352,4 +354,6 @@ When pulling a velocity from that class, a random signal is generated with the m
 
 ## Literature cited
 [1] D. Simon, Optimal State Estimation: Kalman, H Infinity, and Nonlinear Approaches, find it [here](https://www.amazon.de/Optimal-State-Estimation-Nonlinear-Approaches/dp/0471708585/ref=asc_df_0471708585/?tag=googshopde-21&linkCode=df0&hvadid=310939520557&hvpos=&hvnetw=g&hvrand=11109297407473148806&hvpone=&hvptwo=&hvqmt=&hvdev=c&hvdvcmdl=&hvlocint=&hvlocphy=9042503&hvtargid=pla-466802268421&psc=1&th=1&psc=1&tag=&ref=&adgrpid=61876418295&hvpone=&hvptwo=&hvadid=310939520557&hvpos=&hvnetw=g&hvrand=11109297407473148806&hvqmt=&hvdev=c&hvdvcmdl=&hvlocint=&hvlocphy=9042503&hvtargid=pla-466802268421)
+
+
 [2] U. Breymann, Der C++ Programmierer, find it [here](https://www.amazon.de/Programmierer-lernen-Professionell-anwenden-L%C3%B6sungen/dp/3446416447)
