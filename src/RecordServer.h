@@ -11,7 +11,7 @@
 
 /*
 RecordServer:
-A record server holds records of type std::deque<MovableTimestampedType<PositionServiceRecord>> in a thread safe manner in a member variable. It gives thread-safe access to the variable if needed, both simple "adding" and "getting" as well as "sending via promise-future" is offered to clients of this server.
+A record server holds a record of type MovableTimestampedType<PositionServiceRecord> in a thread safe manner in a member variable. It gives thread-safe access to the variable if needed, both simple "adding" and "getting" as well as "sending via promise-future" is offered to clients of this server.
 */
 
 class RecordServer : public RunnableEntity {

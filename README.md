@@ -207,7 +207,33 @@ This software component is responsible to schedule the Extended Kalman Filter (E
 This software component also tracks the trip: It holds a vector of state vectors and "measurements" that must be saved to disc at the end of a trip (here: end of a simulation) for further analysis. The result-file ("results.txt" is found in the build-folder) is a convenient csv-file.
 
 ## The Mechanics of the Producer-Consumer-Middleware
-This application implements a service-oriented, "producer-consumer"-middleware. It is realized by **RecordServer** using a condition variable and a mutex to protect access to the object of interest: The movable record containing images, states and measurements.
+This application implements a service-oriented, "producer-consumer"-middleware. It is realized by **RecordServer** using a condition variable and a mutex to protect access to the object of interest: The movable record containing images, states and measurements (see Types.h and MovableTimestampedType.h). 
+
+RecordServer holds a record of type 
+
+```cpp
+MovableTimestampedType<PositionServiceRecord>
+```
+
+in a thread safe manner in a member variable. It gives thread-safe access to the variable if needed, both simple "adding" and "getting" as well as "sending via promise-future" is offered to clients of this server. In RecordServer.cpp, one can see that a mutex protects the record from being accessed by two threads at the same time:
+
+```cpp
+void RecordServer::sendRecord(std::promise<MovableTimestampedType<PositionServiceRecord>> &&briefcase){
+  printToConsole("RecordServer::sendRecord called.");
+  std::unique_lock<std::mutex> uniqueLock(protection);
+  while(!isCurrent){
+    printToConsole("RecordServer::sendRecord is waiting for record to be updated.");
+    condition.wait(uniqueLock);
+  }
+  briefcase.set_value(std::move(record));
+  uniqueLock.unlock();
+  condition.notify_one();
+  isCurrent = false;
+}
+```
+Moreover, the condition variable tells other threads to wait for access and notifies when the resource becomes available again. This a solution to the "Producer-Consumer-Problem", which occurs frequently [2]: A consumer is waiting for a producer of information, goods, engergy...to become available and is idling while it's inventory is empty. Here the sequence of producers and consumers is as follows:
+
+
 
 ## The Extended Kalman-Filter for Tracking the State of the Road Vehicle
 The EKF is implemented completely in **PositionEstimator**. Those who are familiar with the matter will recognize the equations in PositionEstimator.cpp, like the *prediction*-step:
@@ -322,7 +348,8 @@ class VelocitySource{
 };
 ```
 
-When pulling a velocity from that class, a random signal is generated with the mean being equal to meanVelocity. This completes the seection on the Extended Kalman Filter.
+When pulling a velocity from that class, a random signal is generated with the mean being equal to meanVelocity. This completes the seection on the Extended Kalman Filter, the rest is left to the literature [1].
 
 ## Literature cited
 [1] D. Simon, Optimal State Estimation: Kalman, H Infinity, and Nonlinear Approaches, find it [here](https://www.amazon.de/Optimal-State-Estimation-Nonlinear-Approaches/dp/0471708585/ref=asc_df_0471708585/?tag=googshopde-21&linkCode=df0&hvadid=310939520557&hvpos=&hvnetw=g&hvrand=11109297407473148806&hvpone=&hvptwo=&hvqmt=&hvdev=c&hvdvcmdl=&hvlocint=&hvlocphy=9042503&hvtargid=pla-466802268421&psc=1&th=1&psc=1&tag=&ref=&adgrpid=61876418295&hvpone=&hvptwo=&hvadid=310939520557&hvpos=&hvnetw=g&hvrand=11109297407473148806&hvqmt=&hvdev=c&hvdvcmdl=&hvlocint=&hvlocphy=9042503&hvtargid=pla-466802268421)
+[2] U. Breymann, Der C++ Programmierer, find it [here](https://www.amazon.de/Programmierer-lernen-Professionell-anwenden-L%C3%B6sungen/dp/3446416447)
