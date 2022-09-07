@@ -2,7 +2,7 @@
 
 <img src="cameraBasedPositionEstimationOverviewGraphics.png"/>
 
-This is my capstone project in Udacity's C++ Nanodegree Program. This project contains an application that estimates the position of a road vehicle as it travels on a highway. The application generates an estimate of the state of the vehicle that may be fed to a driver assistant system or may be part of an autonomous driving system: An extended Kalman Filter estimates the position on the road and the velocities using "measurements" taken from a simple camera image. The architecture of this application is service-oriented, suitable for (Ubuntu) Linux and uses OpenCV and the Eigen-Library.
+This is my capstone project in Udacity's C++ Nanodegree Program and it was accepted for graduation in August 2022. This project contains an application that estimates the position of a road vehicle as it travels on a highway. The application generates an estimate of the state of the vehicle that may be fed to a driver assistant system or may be part of an autonomous driving system: An extended Kalman Filter estimates the position on the road and the velocities using "measurements" taken from a simple camera image. The architecture of this application is service-oriented, suitable for (Ubuntu) Linux and uses OpenCV and the Eigen-Library.
 
 The application is shipped with sample images and sample videos for
 
@@ -236,6 +236,72 @@ Moreover, the condition variable tells other threads to wait for access and noti
 <img src=" producerConsumerInCBPE.png"/>
 
 The figure illustrates how the record moves from one software component to the next in a service-oriented manner. Each software component contributes to the content of the record. Ultimately PositionEstimator consumes a subset of the infomation contained in the record (the binary bird eye's view, the record's age and the vehicle's velocity) to give an estimate of the state of the road vehicle.
+
+## The Mechanics of the Managing the Modes in the Middleware
+As one can learn form the section above, the movable data is produced by servers and consumed by their clients. This happens, when all instances are ready to that, the so called _running_ mode. The following modes are defined in Types.h:
+
+```cpp
+enum State {initializing, running, freezed, terminated}; 
+```
+
+The modes are defned as follows:
+
+* **initializing** is entered after constructing the application and prepares each server to serve it's clients
+* **running** can only be entered by leaving initializing and is the state where the application updates the position of the vehicle frequently (when a new image becomes available)
+* **freezed** is a useful state that can be used to stop the application and look at it's data for debugging
+* **terminated** must be entered to stop the application in a predictable and safe manner
+
+The modes are enforced by **PositionServer** by calling 
+
+```cpp
+void setCurrentState(State targetState); 
+```
+
+in the **CameraServer**, **PositionEstimator** and **ImageTransformer**. After creating an instance of each of these, nothing happens, **PositionServer** must fire up threads that that run the _run_-method of each instance. The run method always launches a thread calling the a method that manages the state switches until the state _terminated_ is reached like this:
+
+```cpp
+void PositionEstimator::run(){
+  ...
+  threads.emplace_back(std::thread(&PositionEstimator::manageStateSwitches, this));
+}
+```
+
+When this thread is launched, it runs in a while-loop that is broken only if _terminated_ is reached; to save processor load, the threads sleeps periodically:
+
+```cpp
+void PositionEstimator::manageStateSwitches(){
+  while(true){
+    if(currentState == initializing){
+      ...
+      runInInitializingState();
+      std::this_thread::sleep_for(std::chrono::milliseconds(sleepForMilliseconds));
+    }
+    if(currentState == running){
+      if(ready){
+        ...
+        runInRunningState();
+      }else{
+        ...
+        runInInitializingState();
+      }
+      std::this_thread::sleep_for(std::chrono::milliseconds(sleepForMilliseconds));
+    }
+    if(currentState == terminated){
+      ...
+      runInTerminatedState();
+      /* The only way to end this thread is here! */
+      break;
+    }
+    if(currentState == freezed){
+      ...
+      runInFreezedState();
+      std::this_thread::sleep_for(std::chrono::milliseconds(sleepForMilliseconds));
+    }
+  }
+}
+```
+
+A method like this exists in every one of  **CameraServer**, **PositionEstimator** and **ImageTransformer**. Their instances are controlled by **PositionServer** switching the modes using the method mentioned above. Wrapping it up: Each one of **CameraServer**, **PositionEstimator** and **ImageTransformer** is running in it's own thread and **PositionServer** switches to the desired mode when necessary.  
 
 ## The Extended Kalman-Filter for Tracking the State of the Road Vehicle
 The EKF is implemented completely in **PositionEstimator**. Those who are familiar with the matter will recognize the equations in PositionEstimator.cpp, like the *prediction*-step:
